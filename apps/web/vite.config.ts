@@ -1,23 +1,27 @@
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
-import { varlockVitePlugin } from "@varlock/vite-integration";
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 
-export default defineConfig({
-  server: {
-    port: 3001,
-  },
-  resolve: {
-    tsconfigPaths: true,
-  },
-  plugins: [
-    varlockVitePlugin({ ssrInjectMode: "auto-load" }),
-    tailwindcss(),
-    tanstackRouter({
-      target: "react",
-      autoCodeSplitting: true,
-    }),
-    react(),
-  ],
+import { createWebEnv } from "./src/env-schema.ts";
+
+export default defineConfig(({ mode }) => {
+  createWebEnv(loadEnv(mode, process.cwd(), "VITE_"));
+
+  return {
+    plugins: [
+      tailwindcss(),
+      tanstackRouter({
+        autoCodeSplitting: true,
+        target: "react",
+      }),
+      react(),
+    ],
+    resolve: {
+      tsconfigPaths: true,
+    },
+    server: {
+      port: 3001,
+    },
+  };
 });
