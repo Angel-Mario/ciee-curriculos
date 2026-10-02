@@ -1,7 +1,0 @@
-{
-  "extends": "@ciee-curriculos/config/tsconfig.base.json",
-  "compilerOptions": {
-    "noEmit": true,
-    "strictNullChecks": true
-  }
-}

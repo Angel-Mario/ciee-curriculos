@@ -5,5 +5,41 @@ import tanstack from "ultracite/oxlint/tanstack";
 
 export default defineConfig({
   extends: [core, react, tanstack],
-  ignorePatterns: core.ignorePatterns,
+  ignorePatterns: [
+    ".agents/**",
+    ".agent/**",
+    ".cursor/**",
+    ".kiro/**",
+    ".kilocode/**",
+    ".trae/**",
+    ".claude/**",
+    "node_modules/**",
+    "dist/**",
+    "packages/ui/src/**",
+  ],
+  overrides: [
+    {
+      files: ["*"],
+      rules: {
+        "func-style": ["error", "declaration", { allowArrowFunctions: true }],
+        "no-negated-condition": "off",
+        "unicorn/filename-case": [
+          "error",
+          {
+            cases: {
+              camelCase: true,
+              kebabCase: true,
+              pascalCase: true,
+              snakeCase: true,
+            },
+          },
+        ],
+        "unicorn/no-negated-condition": "off",
+      },
+    },
+  ],
+  rules: {
+    complexity: "off",
+    "no-warning-comments": "off",
+  },
 });
