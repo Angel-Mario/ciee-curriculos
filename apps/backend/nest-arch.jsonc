@@ -1,0 +1,32 @@
+// nest-arch
+//
+// Project scaffolding tool for NestJS applications
+//
+// This file records the options used to generate this project.
+// It can be used to reproduce the exact same project setup.
+// This file is safe to delete.
+{
+  "addons": ["husky", "ultracite", "scalar-ui", "agent-skills"],
+  "api": ["rest"],
+  "architecture": "nest-api",
+  "auth": "none",
+  "createdAt": "2026-10-02T17:27:35.912Z",
+  "database": ["sqlserver"],
+  "description": "backend NestJS application",
+  "extras": ["docker", "swagger", "todo-example"],
+  "formatter": "oxlint-oxfmt",
+  "httpProvider": "express",
+  "initGit": true,
+  "installDependencies": true,
+  "microservices": [],
+  "orm": ["prisma"],
+  "packageManager": "pnpm",
+  "projectName": "backend",
+  "projectType": "single",
+  "reproducibleCommand": "pnpm create nest-arch@latest backend --package-manager pnpm --http-provider express --project-type single --architecture nest-api --database sqlserver --orm prisma --api rest --auth none --extras docker swagger todo-example --microservices none --addons husky ultracite scalar-ui agent-skills --formatter oxlint-oxfmt --install-dependencies yes --git --ultracite-editors universal --ultracite-agents universal --ultracite-install-skill yes",
+  "ultraciteAgents": ["universal"],
+  "ultraciteEditors": ["universal"],
+  "ultraciteHooks": [],
+  "ultraciteInstallSkill": "yes",
+  "version": "0.4.6",
+}
