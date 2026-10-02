@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 
+import { CandidatesModule } from "./api/candidates/candidates.module.js";
 import { TodoModule } from "./api/todo/todo.module.js";
 import { AppController } from "./app.controller.js";
 import { AppService } from "./app.service.js";
@@ -22,6 +23,7 @@ import { DbModule } from "./database/db.module.js";
         user: env.SQLSERVER_USER,
       },
     }),
+    CandidatesModule,
     TodoModule,
   ],
   providers: [AppService],

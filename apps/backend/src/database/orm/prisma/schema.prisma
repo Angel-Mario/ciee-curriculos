@@ -17,3 +17,14 @@ model Todo {
 
   @@map("todo")
 }
+
+model Candidate {
+  id                  Int     @id @default(autoincrement()) @db.Int
+  fullName            String  @map("full_name") @db.NVarChar(200)
+  email               String  @db.NVarChar(254)
+  phone               String? @db.NVarChar(32)
+  interestArea        String? @map("interest_area") @db.NVarChar(200)
+  professionalSummary String? @map("professional_summary") @db.NVarChar(2000)
+
+  @@map("candidates")
+}

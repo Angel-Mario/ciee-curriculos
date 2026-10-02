@@ -63,7 +63,7 @@ pnpm prisma:migrate:deploy
 
 Também é possível executá-los neste diretório usando os nomes de scripts do pacote (por exemplo, `pnpm prisma:generate`). `prisma:push` sincroniza o esquema sem criar migrações; `prisma:migrate` executa `prisma migrate dev` para desenvolvimento; `prisma:migrate:deploy` aplica migrações já criadas.
 
-O esquema está em `src/database/orm/prisma/schema.prisma` e atualmente define o modelo `Todo`.
+O esquema está em `src/database/orm/prisma/schema.prisma` e define `Candidate` e o modelo inicial `Todo`. A migration inicial é aditiva: em uma base nova ela cria ambas as tabelas; em uma base já criada pelo esquema Todo, preserva os dados e acrescenta `candidates`. Confira `prisma migrate status` antes de executar migrations em uma base existente.
 
 ## Desenvolvimento e compilação
 
@@ -93,6 +93,12 @@ Por padrão, o backend atende em `http://localhost:3000`. As rotas da API usam o
 - `POST /api/todos`: cria um item com `title` obrigatório e `description` opcional; `completed` é opcional e seu valor padrão é `false`.
 - `PUT /api/todos/:id`: atualiza `title`, `description` e/ou `completed`.
 - `DELETE /api/todos/:id`: exclui um item.
+- `POST /api/candidates`: cria um candidato com `fullName` e `email` obrigatórios; aceita `phone`, `interestArea` e `professionalSummary` opcionais.
+- `GET /api/candidates`: lista candidatos, do mais recente ao mais antigo.
+- `GET /api/candidates/:id`: consulta os dados do candidato ou retorna 404.
+- `DELETE /api/candidates/:id`: exclui um candidato ou retorna 404.
+- `DELETE /api/candidates` com `{ "ids": [1, 2] }`: exclui até 100 candidatos; IDs repetidos são deduplicados e IDs inexistentes são ignorados. A resposta informa `deletedCount`.
+- `POST /api/candidates/import-pdf`: recebe um arquivo `file` em `multipart/form-data` e sugere nome, e-mail e telefone para revisão; não salva o candidato.
 
 Os DTOs são validados com Zod por meio do pipe global do NestJS. Consulte <http://localhost:3000/docs> para ver o esquema OpenAPI gerado.
 

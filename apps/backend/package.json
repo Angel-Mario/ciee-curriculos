@@ -41,6 +41,7 @@
     "@scalar/nestjs-api-reference": "^1.2.17",
     "@t3-oss/env-core": "^0.13.11",
     "dotenv": "^17.2.2",
+    "pdf-parse": "2.4.5",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "zod": "catalog:"
