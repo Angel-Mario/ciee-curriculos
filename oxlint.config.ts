@@ -23,6 +23,9 @@ export default defineConfig({
       rules: {
         "func-style": ["error", "declaration", { allowArrowFunctions: true }],
         "no-negated-condition": "off",
+        "react/function-component-definition": ["allow"],
+        "typescript/no-empty-interface": "off",
+        "typescript/no-empty-object-type": "off",
         "unicorn/filename-case": [
           "error",
           {

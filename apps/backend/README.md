@@ -1,52 +1,107 @@
-# backend
+# Backend
 
-backend NestJS application
+API REST desenvolvida com NestJS. O Prisma acessa o SQL Server por meio de `@prisma/adapter-mssql`; a documentação OpenAPI é servida pelo Scalar.
 
-## Setup
+## Requisitos e configuração
+
+Instale as dependências na raiz do monorepo:
 
 ```bash
-# Install dependencies
 pnpm install
 ```
 
-## Running the App
+Crie `apps/backend/.env` a partir do modelo:
 
 ```bash
-# development mode (live reload)
-pnpm dev
-
-# build and production mode
-pnpm build
-pnpm start
+cp apps/backend/.env.example apps/backend/.env
 ```
 
-## Testing
+No PowerShell:
+
+```powershell
+Copy-Item apps/backend/.env.example apps/backend/.env
+```
+
+Configure pelo menos `SQLSERVER_USER` e `SQLSERVER_PASSWORD`. O arquivo de exemplo inclui uma senha apenas para desenvolvimento: substitua-a por um segredo único e seguro. O nome padrão do banco de dados é `backend_db`.
+
+Variáveis disponíveis:
+
+| Variável | Uso |
+| --- | --- |
+| `PORT` | Porta HTTP do backend (padrão: `3000`). |
+| `NODE_ENV` | Ambiente de execução: `development`, `production` ou `test`. |
+| `CORS_ORIGIN` | Origem permitida pelo CORS (o modelo usa `http://localhost:3001`). |
+| `TRUSTED_PROXY_IPS` | Endereços IP/CIDRs de proxies confiáveis, separados por vírgula; vazio por padrão. |
+| `SQLSERVER_HOST` | Host do SQL Server (padrão: `localhost`). |
+| `SQLSERVER_PORT` | Porta do SQL Server (padrão: `1433`). |
+| `SQLSERVER_DATABASE` | Banco de dados (padrão: `backend_db`). |
+| `SQLSERVER_USER` | Usuário do banco de dados; obrigatório. |
+| `SQLSERVER_PASSWORD` | Senha; obrigatória. |
+| `SQLSERVER_ENCRYPT` | Ativa a criptografia da conexão; ativada por padrão. |
+| `SQLSERVER_TRUST_SERVER_CERTIFICATE` | Aceita certificados autoassinados; em produção, desative essa opção ao usar certificados válidos. |
+
+## SQL Server e Prisma
+
+Para iniciar a instância local do SQL Server definida no Compose da raiz:
 
 ```bash
-# unit tests
-pnpm test
-
-# e2e tests
-pnpm test:e2e
-
-# test coverage
-pnpm test:cov
+pnpm db:start
 ```
 
-## Database Setup
+A verificação de saúde do Compose cria `backend_db` caso ainda não exista. Para usar uma instância externa, confirme que o banco já foi criado e configure o host, a porta e as credenciais em `apps/backend/.env`.
 
-This project uses **Prisma** as the ORM. Available commands:
+Comandos do Prisma executados na raiz:
 
 ```bash
 pnpm prisma:generate
+pnpm prisma:format
 pnpm prisma:push
 pnpm prisma:studio
 pnpm prisma:migrate
 pnpm prisma:migrate:deploy
 ```
 
-Set `SQLSERVER_HOST`, `SQLSERVER_PORT`, `SQLSERVER_DATABASE`, `SQLSERVER_USER`, and `SQLSERVER_PASSWORD` in `.env` before running Prisma commands. The SQL Server database must already exist. The generated password is a development-only example that satisfies SQL Server's password policy; replace it with a unique secret before sharing the project or deploying it. For local development, set `SQLSERVER_TRUST_SERVER_CERTIFICATE=true` when using a self-signed certificate; keep certificate validation enabled for production.
+Também é possível executá-los neste diretório usando os nomes de scripts do pacote (por exemplo, `pnpm prisma:generate`). `prisma:push` sincroniza o esquema sem criar migrações; `prisma:migrate` executa `prisma migrate dev` para desenvolvimento; `prisma:migrate:deploy` aplica migrações já criadas.
 
-## Docker Compose
+O esquema está em `src/database/orm/prisma/schema.prisma` e atualmente define o modelo `Todo`.
 
-Start the application and its database with `docker compose up --build`. Compose publishes the API on `127.0.0.1:3000` by default (Fastify uses `3001`). If that host port is already in use or reserved, set `APP_PORT` to a free host port before starting; the container's internal port stays unchanged. In PowerShell, for example: `$env:APP_PORT = "3100"; docker compose up --build`. Compose also publishes SQL Server on `127.0.0.1:1433` so Prisma commands run on the host can connect. The API container uses the internal `sqlserver:1433` address. If host port 1433 is occupied, change `SQLSERVER_PORT` in `.env`; keep the API container's internal database port at 1433.
+## Desenvolvimento e compilação
+
+A partir da raiz:
+
+```bash
+pnpm dev:backend
+pnpm --filter backend build
+pnpm --filter backend start
+```
+
+Ou, a partir deste diretório:
+
+```bash
+pnpm dev
+pnpm build
+pnpm start
+pnpm start:prod
+```
+
+Por padrão, o backend atende em `http://localhost:3000`. As rotas da API usam o prefixo `/api`; a documentação do Scalar está disponível em `/docs`.
+
+## API atual
+
+- `GET /api`: retorna uma mensagem de boas-vindas.
+- `GET /api/todos`: lista os itens.
+- `POST /api/todos`: cria um item com `title` obrigatório e `description` opcional; `completed` é opcional e seu valor padrão é `false`.
+- `PUT /api/todos/:id`: atualiza `title`, `description` e/ou `completed`.
+- `DELETE /api/todos/:id`: exclui um item.
+
+Os DTOs são validados com Zod por meio do pipe global do NestJS. Consulte <http://localhost:3000/docs> para ver o esquema OpenAPI gerado.
+
+## Testes
+
+```bash
+pnpm --filter backend test
+pnpm --filter backend test:e2e
+pnpm --filter backend test:cov
+```
+
+Os testes unitários usam Vitest; os testes end-to-end usam `vitest.config.e2e.ts`.

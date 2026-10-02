@@ -1,131 +1,135 @@
-# ciee-curriculos
+# CIEE Currículos
 
-This project was created with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack), a modern TypeScript stack that combines React, TanStack Router, Express, and more.
+Monorepo da aplicação web e da API. O frontend usa React, Vite e TanStack Router; a API usa NestJS e Prisma com SQL Server.
 
-## Features
+## Requisitos
 
-- **TypeScript** - For type safety and improved developer experience
-- **TanStack Router** - File-based routing with full type safety
-- **TailwindCSS** - Utility-first CSS for rapid UI development
-- **Shared UI package** - shadcn/ui primitives live in `packages/ui`
-- **Express** - Fast, unopinionated web framework
-- **Node.js** - Runtime environment
-- **Prisma** - TypeScript-first ORM
-- **PostgreSQL** - Database engine
-- **Husky** - Git hooks for code quality
-- **Oxlint** - Oxlint + Oxfmt (linting & formatting)
-- **Turborepo** - Optimized monorepo build system
+- Node.js 22 ou superior
+- pnpm 11
+- Docker Desktop, caso queira usar o SQL Server pelo Docker Compose
 
-## Getting Started
+## Início rápido
 
-First, install the dependencies:
+Instale as dependências na raiz do repositório:
 
 ```bash
 pnpm install
 ```
 
-## Database Setup
-
-Generate the Prisma client before development, typechecking, or building, including in CI and deployment builds. Run this again after changing the Prisma schema:
+Crie o arquivo de ambiente do backend a partir do modelo e configure uma senha para o SQL Server:
 
 ```bash
-pnpm run db:generate
+cp apps/backend/.env.example apps/backend/.env
 ```
 
-This project uses PostgreSQL with Prisma.
+No PowerShell:
 
-1. Make sure you have a PostgreSQL database set up.
-2. Update your `apps/server/.env` file with your PostgreSQL connection details.
+```powershell
+Copy-Item apps/backend/.env.example apps/backend/.env
+```
 
-3. Apply the schema to your database:
+O modelo contém uma senha destinada apenas ao desenvolvimento. Substitua-a por uma senha segura antes de compartilhar o ambiente ou fazer uma implantação. Para o desenvolvimento local, inicie o SQL Server e gere o cliente Prisma:
 
 ```bash
-pnpm run db:push
+pnpm db:start
+pnpm prisma:generate
 ```
 
-Then, run the development server:
+`pnpm db:start` inicia o serviço `sqlserver` definido no Docker Compose; a verificação de saúde cria `backend_db` se o banco ainda não existir. Se você usar outra instância do SQL Server, configure a conexão em `apps/backend/.env` e confirme que o banco de dados já existe.
+
+Inicie o frontend e o backend:
 
 ```bash
-pnpm run dev
+pnpm dev
 ```
 
-Open [http://localhost:3001](http://localhost:3001) in your browser to see the web application. The API is running at [http://localhost:3000](http://localhost:3000).
+- Web: <http://localhost:3001>
+- API: <http://localhost:3000/api>
+- Documentação interativa da API: <http://localhost:3000/docs>
 
-## UI Customization
+O backend oferece uma rota de exemplo e operações CRUD de `Todo` em `/api/todos`.
 
-React web apps in this stack share shadcn/ui primitives through `packages/ui`.
+## Variáveis de ambiente
 
-- Change design tokens and global styles in `packages/ui/src/styles/globals.css`
-- Update shared primitives in `packages/ui/src/components/*`
-- Adjust shadcn aliases or style config in `packages/ui/components.json` and `apps/web/components.json`
+O backend carrega `apps/backend/.env`. O modelo `apps/backend/.env.example` documenta as seguintes variáveis:
 
-### Add more shared components
+- `PORT`: porta HTTP da API (padrão: `3000`).
+- `CORS_ORIGIN`: origem permitida pelo CORS.
+- `TRUSTED_PROXY_IPS`: lista de IPs/CIDRs de proxies confiáveis, separada por vírgulas; vazia por padrão.
+- `SQLSERVER_HOST`, `SQLSERVER_PORT`, `SQLSERVER_DATABASE`, `SQLSERVER_USER`, `SQLSERVER_PASSWORD`: conexão com o SQL Server.
+- `SQLSERVER_ENCRYPT` e `SQLSERVER_TRUST_SERVER_CERTIFICATE`: opções TLS da conexão.
 
-Run this from the project root to add more primitives to the shared UI package:
+O frontend exige `VITE_SERVER_URL`, por exemplo `http://localhost:3000`. O Vite valida essa variável ao iniciar e ao compilar. Para desenvolvimento local, você pode defini-la em `apps/web/.env.local`.
+
+## Banco de dados e Prisma
+
+Os comandos executados na raiz iniciam as tarefas do Prisma em `apps/backend`:
 
 ```bash
-npx shadcn@latest add accordion dialog popover sheet table -c packages/ui
+pnpm prisma:generate
+pnpm prisma:format
+pnpm prisma:push
+pnpm prisma:migrate
+pnpm prisma:migrate:deploy
+pnpm prisma:studio
 ```
 
-Import shared components like this:
+`prisma:migrate` executa `prisma migrate dev` e destina-se ao desenvolvimento; `prisma:migrate:deploy` aplica migrações existentes em implantações. Consulte [apps/backend/README.md](apps/backend/README.md) para obter detalhes da configuração do SQL Server.
 
-```tsx
-import { Button } from "@ciee-curriculos/ui/components/button";
+## Docker Compose
+
+O Compose precisa do arquivo de ambiente do backend para interpolar `SQLSERVER_PASSWORD`; `env_file` e os secrets dos serviços não são usados nessa etapa. Os scripts da raiz já passam esse arquivo:
+
+```bash
+pnpm docker:build
+pnpm docker:up
+pnpm docker:logs
+pnpm docker:down
 ```
 
-### Add app-specific blocks
+Também é possível executar o Compose diretamente:
 
-If you want to add app-specific blocks instead of shared primitives, run the shadcn CLI from `apps/web`.
-
-## Environment Configuration
-
-The web app validates environment variables with T3 Env and Zod in `apps/web/src/env-schema.ts`. Vite loads variables with the `VITE_` prefix, and its config validates them on startup and build. Set `VITE_SERVER_URL` in `apps/web/.env.local` or in the deployment environment.
-
-## Deployment
-
-### Docker Compose
-
-- Target: web + server
-- Config: `docker-compose.yml` (app Dockerfiles live in `apps/*/Dockerfile`)
-- Build images: pnpm run docker:build
-- Start: pnpm run docker:up
-- Logs: pnpm run docker:logs
-- Stop: pnpm run docker:down
-
-Environment variables are read from each app's `.env` file (baked into web builds for public variables) and overridden in `docker-compose.yml` for container networking.
-
-For more details, see the guide on [Deploying with Docker Compose](https://www.better-t-stack.dev/docs/guides/docker).
-
-## Git Hooks and Formatting
-
-- Initialize hooks: `pnpm run prepare`
-- Run checks: `pnpm run check`
-
-## Project Structure
-
-```
-ciee-curriculos/
-├── apps/
-│   ├── web/         # Frontend application (React + TanStack Router)
-│   └── server/      # Backend API (Express)
-├── packages/
-│   ├── ui/          # Shared shadcn/ui components and styles
-│   └── db/          # Database schema & queries
+```bash
+docker compose --env-file apps/backend/.env up --build
 ```
 
-## Available Scripts
+Durante a compilação, o backend monta `apps/backend/.env` como um segredo temporário do BuildKit para gerar o Prisma Client; o arquivo e seus valores não são copiados para a imagem. Em execução, o Compose configura as variáveis necessárias para o backend.
 
-- `pnpm run dev`: Start all applications in development mode
-- `pnpm run build`: Build all applications
-- `pnpm run dev:web`: Start only the web application
-- `pnpm run dev:server`: Start only the server
-- `pnpm run check-types`: Check TypeScript types across all apps
-- `pnpm run db:push`: Push schema changes to database
-- `pnpm run db:generate`: Generate database client/types
-- `pnpm run db:migrate`: Run database migrations
-- `pnpm run db:studio`: Open database studio UI
-- `pnpm run check`: Run Oxlint and Oxfmt
-- `pnpm run docker:build`: Build the Docker Compose images
-- `pnpm run docker:up`: Build and start the Docker Compose stack
-- `pnpm run docker:logs`: Tail logs from the Docker Compose stack
-- `pnpm run docker:down`: Stop the Docker Compose stack
+A stack publica a aplicação web na porta `3001`, a API em `127.0.0.1:3000` e o SQL Server em `127.0.0.1:1433`. `APP_PORT` altera a porta da API publicada no host e `SQLSERVER_PORT` altera a porta do SQL Server no host; dentro da rede do Compose, a API sempre se conecta a `sqlserver:1433`.
+
+O Dockerfile da aplicação web monta `apps/web/.env` como um secret do BuildKit. Portanto, esse arquivo precisa existir para compilar com o Compose e definir `VITE_SERVER_URL`. O valor de `VITE_SERVER_URL` é incorporado ao bundle durante a compilação; use uma URL acessível pelo navegador, não o nome interno `backend`.
+
+## Principais scripts
+
+| Comando | Descrição |
+| --- | --- |
+| `pnpm dev` | Inicia as aplicações em modo de desenvolvimento. |
+| `pnpm dev:web` | Inicia apenas a aplicação web. |
+| `pnpm dev:backend` | Inicia apenas o backend. |
+| `pnpm build` | Compila as aplicações. |
+| `pnpm check-types` | Executa as verificações de tipos definidas no workspace. |
+| `pnpm check` | Verifica formatação e lint com Ultracite. |
+| `pnpm fix` | Aplica correções de formatação e lint. |
+| `pnpm db:start` | Inicia o SQL Server pelo Compose. |
+
+## Estrutura
+
+```text
+apps/
+  backend/   API NestJS, Prisma, configuração e testes
+  web/       Aplicação React, Vite e TanStack Router
+packages/
+  config/    Pacote de configuração do workspace
+  ui/        Componentes React compartilhados e estilos
+```
+
+## Qualidade e testes
+
+```bash
+pnpm check
+pnpm check-types
+pnpm --filter backend test
+pnpm --filter backend test:e2e
+```
+
+Os comandos de teste são executados no pacote do backend; não há um script `test` na raiz. Consulte [apps/backend/README.md](apps/backend/README.md) para mais detalhes.

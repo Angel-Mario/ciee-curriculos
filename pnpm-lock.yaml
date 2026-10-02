@@ -2001,41 +2001,6 @@ packages:
   '@visx/vendor@4.0.0-alpha.0':
     resolution: {integrity: sha512-6I+MuqXBcv9jnlcVowHoHKSdk9gXTWkHLKyqBwRWg7LY6A3Ei8SHfubpqGV5rBUSppxMq2RszPJUS6w+H0YgmQ==}
 
-  '@visx/curve@4.0.1-alpha.0':
-    resolution: {integrity: sha512-jRu61Uz274pV1zyioXmboyrLutYbnKsgjj4njSGCnhdXj5GkZvZbg+ThDb6oOzoAnJOBRLz4rzPlWvNJOzuVMg==}
-
-  '@visx/event@4.0.1-alpha.0':
-    resolution: {integrity: sha512-EQqCMSv/s8NbFjo+hz3FKsvvYfP+2QslsFJ/24/O5l/W+7UC6J6aAvO0ujVwrTwdYbuQ+vhxKi1xdPdKR/qj1g==}
-
-  '@visx/grid@4.0.1-alpha.0':
-    resolution: {integrity: sha512-rycutGmTHO+znNdPumheWMglm7YfpffvRwUkVy5zy4WoORIuKTMkDxwnOzHG2xMxU3EE/YCd37xFV5AxA30yeg==}
-    peerDependencies:
-      react: ^16.14.0 || ^17.0.0-0 || ^18.0.0-0 || ^19.0.0-0
-
-  '@visx/group@4.0.1-alpha.0':
-    resolution: {integrity: sha512-V19l7iQ7jccBv8kao/EByuI6o4xtxzzLV9nqVI1hRvmdzTVsuLpqlwzYCZUXJaTVvUWf8s4D2SQFjGkj/Nw+0w==}
-    peerDependencies:
-      react: ^16.14.0 || ^17.0.0-0 || ^18.0.0-0 || ^19.0.0-0
-
-  '@visx/point@4.0.1-alpha.0':
-    resolution: {integrity: sha512-ijTfr/Nx09f03vIj9nyTr3z4Xth4Y75427UaogJh6dnIRLMEFHQOwNu791sbfiNj0a+ZXuaE32h0vKrFe4/8Qg==}
-
-  '@visx/responsive@4.0.1-alpha.0':
-    resolution: {integrity: sha512-o+1zGywQZY0+yOx3Iw87wc4bbPJRr/HnIukTwfOz4UVyj9pB1OQNVHB7OORO1+LBHJceWpB31co/ZV9KHncKrA==}
-    peerDependencies:
-      react: ^16.14.0 || ^17.0.0-0 || ^18.0.0-0 || ^19.0.0-0
-
-  '@visx/scale@4.0.1-alpha.0':
-    resolution: {integrity: sha512-nzjeE87vFSAXGWFiiNfBpNLAf0Q8Qmf6syvKLjqNi4kGZkdhbUll3E/59YsgWXmjM8+llPLWzGsP+JPvo5eq1A==}
-
-  '@visx/shape@4.0.1-alpha.0':
-    resolution: {integrity: sha512-62QeiVNmPlterQGwhkEDcbq7M0MqY0lBsK5QKXtM9ZoPZWkuGV3aykA3+Xu20B2FAvyJq4LqJzBc7Sxr+EAdbA==}
-    peerDependencies:
-      react: ^16.14.0 || ^17.0.0-0 || ^18.0.0-0 || ^19.0.0-0
-
-  '@visx/vendor@4.0.0-alpha.0':
-    resolution: {integrity: sha512-6I+MuqXBcv9jnlcVowHoHKSdk9gXTWkHLKyqBwRWg7LY6A3Ei8SHfubpqGV5rBUSppxMq2RszPJUS6w+H0YgmQ==}
-
   '@vitejs/plugin-react@6.1.1':
     resolution: {integrity: sha512-yxLaQV9gkhS8ezJqCM6+ndU7mDY6gqAg75NQ+0IjwEI8IYOmQCgkRwHKVSfWXW076DsqMo0Dk+0FK1U+M5RgFw==}
     engines: {node: ^20.19.0 || >=22.12.0}
@@ -6146,84 +6111,6 @@ snapshots:
       tslib: 2.8.1
     transitivePeerDependencies:
       - supports-color
-
-
-  '@visx/curve@4.0.1-alpha.0':
-    dependencies:
-      '@visx/vendor': 4.0.0-alpha.0
-
-  '@visx/event@4.0.1-alpha.0':
-    dependencies:
-      '@types/react': 19.3.0
-      '@visx/point': 4.0.1-alpha.0
-
-  '@visx/grid@4.0.1-alpha.0(react@19.3.0)':
-    dependencies:
-      '@types/react': 19.3.0
-      '@visx/curve': 4.0.1-alpha.0
-      '@visx/group': 4.0.1-alpha.0(react@19.3.0)
-      '@visx/point': 4.0.1-alpha.0
-      '@visx/scale': 4.0.1-alpha.0
-      '@visx/shape': 4.0.1-alpha.0(react@19.3.0)
-      classnames: 2.5.1
-      react: 19.3.0
-
-  '@visx/group@4.0.1-alpha.0(react@19.3.0)':
-    dependencies:
-      '@types/react': 19.3.0
-      classnames: 2.5.1
-      react: 19.3.0
-
-  '@visx/point@4.0.1-alpha.0': {}
-
-  '@visx/responsive@4.0.1-alpha.0(react@19.3.0)':
-    dependencies:
-      '@types/lodash': 4.17.25
-      '@types/react': 19.3.0
-      lodash: 4.18.1
-      react: 19.3.0
-
-  '@visx/scale@4.0.1-alpha.0':
-    dependencies:
-      '@visx/vendor': 4.0.0-alpha.0
-
-  '@visx/shape@4.0.1-alpha.0(react@19.3.0)':
-    dependencies:
-      '@types/lodash': 4.17.25
-      '@types/react': 19.3.0
-      '@visx/curve': 4.0.1-alpha.0
-      '@visx/group': 4.0.1-alpha.0(react@19.3.0)
-      '@visx/scale': 4.0.1-alpha.0
-      '@visx/vendor': 4.0.0-alpha.0
-      classnames: 2.5.1
-      lodash: 4.18.1
-      react: 19.3.0
-
-  '@visx/vendor@4.0.0-alpha.0':
-    dependencies:
-      '@types/d3-array': 3.0.3
-      '@types/d3-color': 3.1.0
-      '@types/d3-delaunay': 6.0.1
-      '@types/d3-format': 3.0.1
-      '@types/d3-geo': 3.1.0
-      '@types/d3-interpolate': 3.0.1
-      '@types/d3-path': 3.1.1
-      '@types/d3-scale': 4.0.2
-      '@types/d3-shape': 3.1.7
-      '@types/d3-time': 3.0.0
-      '@types/d3-time-format': 2.1.0
-      d3-array: 3.2.1
-      d3-color: 3.1.0
-      d3-delaunay: 6.0.2
-      d3-format: 3.1.0
-      d3-geo: 3.1.0
-      d3-interpolate: 3.0.1
-      d3-path: 3.1.0
-      d3-scale: 4.0.2
-      d3-shape: 3.2.0
-      d3-time: 3.1.0
-      d3-time-format: 4.1.0
-      internmap: 2.0.3
 
   '@visx/curve@4.0.1-alpha.0':
     dependencies:

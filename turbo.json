@@ -13,23 +13,34 @@
     "check-types": {
       "dependsOn": ["^check-types"]
     },
+    "test": {
+      "dependsOn": ["^test"]
+    },
     "dev": {
       "cache": false,
       "persistent": true
     },
-    "db:push": {
+    "prisma:push": {
       "cache": false,
       "interactive": true
     },
-    "db:generate": {
+    "prisma:generate": {
       "cache": false,
       "interactive": false
     },
-    "db:migrate": {
+    "prisma:format": {
+      "cache": false,
+      "interactive": false
+    },
+    "prisma:migrate": {
       "cache": false,
       "interactive": true
     },
-    "db:studio": {
+    "prisma:migrate:deploy": {
+      "cache": false,
+      "interactive": false
+    },
+    "prisma:studio": {
       "cache": false,
       "persistent": true
     },
