@@ -1,0 +1,14 @@
+import { createEnv } from "@t3-oss/env-core";
+import { z } from "zod";
+
+export const createWebEnv = (
+  runtimeEnv: Record<string, boolean | string | undefined>
+) =>
+  createEnv({
+    client: {
+      VITE_SERVER_URL: z.url(),
+    },
+    clientPrefix: "VITE_",
+    emptyStringAsUndefined: true,
+    runtimeEnv,
+  });
