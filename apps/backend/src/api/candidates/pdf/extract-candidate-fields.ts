@@ -10,7 +10,7 @@ export type ExtractedCandidateFields = Record<
 
 const emailSchema = z.email();
 const emailPattern = /[\w.!#$%&'*+/=?^`{|}~-]+@[\w-]+(?:\.[\w-]+)+/gu;
-const phonePattern = /(?:\+?\d[\d\s().-]{7,}\d)/gu;
+const phonePattern = /(?:\+?\d[\d \t().-]{7,}\d)/gu;
 const sectionPattern =
   /^(?:curr[ií]culo|resume|perfil|objetivo|experi[eê]ncia|forma[cç][aã]o|educa[cç][aã]o|habilidades|compet[eê]ncias|contato)\b/iu;
 const nameLabelPattern =

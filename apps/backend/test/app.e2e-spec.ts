@@ -2,14 +2,13 @@ import { INestApplication, StandardSchemaValidationPipe } from "@nestjs/common";
 import { Test, TestingModule } from "@nestjs/testing";
 import { apiReference } from "@scalar/nestjs-api-reference";
 import request from "supertest";
-import type { App } from "supertest/types";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createDocs } from "../src/docs/create-docs.js";
 import { AppModule } from "./../src/app.module.js";
 
 describe("AppController (e2e)", () => {
-  let app: INestApplication<App>;
+  let app: INestApplication;
   let generatedOpenApi: Awaited<ReturnType<typeof createDocs>>;
 
   async function startApplication() {

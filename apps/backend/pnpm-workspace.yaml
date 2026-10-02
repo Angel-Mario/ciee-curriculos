@@ -1,6 +1,0 @@
-allowBuilds:
-  protobufjs: true
-  "@nestjs/core": true
-  "@scarf/scarf": true
-  prisma: true
-  "@prisma/engines": true

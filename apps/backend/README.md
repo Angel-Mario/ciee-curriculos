@@ -104,6 +104,26 @@ Os DTOs são validados com Zod por meio do pipe global do NestJS. Consulte <http
 
 ## Testes
 
+Os testes e2e da API de candidatos precisam de um banco SQL Server dedicado cujo nome termine em `_test`. A suíte verifica essa condição antes de iniciar e2e; não use `backend_db`. Crie o banco vazio `backend_db_test` na mesma instância SQL Server configurada no `.env` antes de aplicar as migrations.
+
+No PowerShell, a partir da raiz do monorepo:
+
+```powershell
+$env:SQLSERVER_DATABASE = "backend_db_test"
+pnpm --filter backend exec prisma migrate deploy
+pnpm --filter backend test:e2e
+Remove-Item Env:SQLSERVER_DATABASE
+```
+
+No Bash:
+
+```bash
+SQLSERVER_DATABASE=backend_db_test pnpm --filter backend exec prisma migrate deploy
+SQLSERVER_DATABASE=backend_db_test pnpm --filter backend test:e2e
+```
+
+Os e2e criam candidatos com dados únicos e removem somente os IDs criados pela própria suíte. A base `backend_db_test` permanece disponível entre execuções; os testes não a reinicializam nem apagam seu conteúdo.
+
 ```bash
 pnpm --filter backend test
 pnpm --filter backend test:e2e
