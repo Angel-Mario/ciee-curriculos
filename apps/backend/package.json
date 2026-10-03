@@ -33,6 +33,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1145.0",
+    "@ciee-curriculos/shared": "workspace:*",
     "@nestjs/common": "^12.0.1",
     "@nestjs/core": "^12.0.1",
     "@nestjs/platform-express": "^12.0.1",

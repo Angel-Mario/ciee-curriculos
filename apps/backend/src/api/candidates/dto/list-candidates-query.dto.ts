@@ -1,21 +1,7 @@
-import { z } from "zod";
-
-const SORT_FIELDS = [
-  "id",
-  "fullName",
-  "email",
-  "phone",
-  "interestArea",
-] as const;
+import { listCandidatesQuerySchema } from "@ciee-curriculos/shared";
 
 export class ListCandidatesQueryDto {
-  static readonly schema = z
-    .object({
-      q: z.string().trim().max(200).optional(),
-      sortBy: z.enum(SORT_FIELDS).default("id"),
-      sortOrder: z.enum(["asc", "desc"]).default("desc"),
-    })
-    .strict();
+  static readonly schema = listCandidatesQuerySchema;
 }
 
-export type ListCandidatesQuery = z.infer<typeof ListCandidatesQueryDto.schema>;
+export type { ListCandidatesQuery } from "@ciee-curriculos/shared";

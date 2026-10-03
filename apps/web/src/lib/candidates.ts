@@ -1,24 +1,16 @@
+import type {
+  Candidate,
+  CreateCandidateInput,
+  PdfImportResult,
+} from "@ciee-curriculos/shared";
+
 import { env } from "@/env";
 
-export interface Curriculum {
-  id: number;
-  originalName: string;
-  sizeBytes: number;
-  uploadedAt: string;
-  url?: string;
-}
-
-export interface Candidate {
-  id: number;
-  fullName: string;
-  email: string;
-  phone: string | null;
-  interestArea: string | null;
-  professionalSummary: string | null;
-  createdAt?: string;
-  hasCurriculum?: boolean;
-  curriculum?: Curriculum | null;
-}
+export type {
+  Candidate,
+  Curriculum,
+  PdfImportResult,
+} from "@ciee-curriculos/shared";
 
 export interface CandidateInput {
   fullName: string;
@@ -26,16 +18,6 @@ export interface CandidateInput {
   phone: string;
   interestArea: string;
   professionalSummary: string;
-}
-
-export interface PdfImportResult {
-  data: {
-    fullName: string | null;
-    email: string | null;
-    phone: string | null;
-  };
-  missingFields: string[];
-  warnings: { code: string; message: string }[];
 }
 
 export class ApiError extends Error {
@@ -60,7 +42,6 @@ const sampleCandidates: Candidate[] = [
       originalName: "curriculo_ana_carolina.pdf",
       sizeBytes: 1_200_000,
       uploadedAt: "2025-09-28T14:32:00.000-03:00",
-      url: "#curriculum-demo",
     },
     email: "ana.silva@email.com",
     fullName: "Ana Carolina Silva",
@@ -293,7 +274,7 @@ export function getCandidate(id: number): Promise<Candidate> {
 }
 
 export function createCandidate(
-  input: CandidateInput,
+  input: CandidateInput & CreateCandidateInput,
   file?: File
 ): Promise<Candidate> {
   if (isMockMode()) {
@@ -307,7 +288,6 @@ export function createCandidate(
             originalName: file.name,
             sizeBytes: file.size,
             uploadedAt: new Date().toISOString(),
-            url: "#curriculum-demo",
           }
         : null,
       hasCurriculum: Boolean(file),
