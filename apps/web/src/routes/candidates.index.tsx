@@ -18,6 +18,7 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@ciee-curriculos/ui/components/input-group";
+import { ScrollArea } from "@ciee-curriculos/ui/components/scroll-area";
 import { toast } from "@ciee-curriculos/ui/components/toast";
 import {
   Tooltip,
@@ -92,6 +93,7 @@ import {
   interestAreas,
 } from "@/lib/candidates";
 import type { Candidate } from "@/lib/candidates";
+import { formatBrazilianPhone } from "@/lib/phone";
 
 export const Route = createFileRoute("/candidates/")({
   component: CandidateListPage,
@@ -146,6 +148,14 @@ function CandidateListPage() {
   const downloading = downloadMutation.isPending;
   const searchRef = useRef<HTMLInputElement>(null);
   const deleteTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const listViewportRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!candidateQuery.data || candidateQuery.isPlaceholderData) {
+      return;
+    }
+    listViewportRef.current?.scrollTo({ top: 0 });
+  }, [candidateQuery.data, candidateQuery.isPlaceholderData]);
 
   useEffect(() => {
     if (candidateQuery.error) {
@@ -514,83 +524,100 @@ function CandidateListPage() {
                 {search.sortOrder === "asc" ? "Crescente" : "Decrescente"}
               </Button>
             </div>
-            <div className="table-scroll">
-              <Table className="candidate-table">
-                <caption className="sr-only">
-                  Candidatos cadastrados, contatos e ações
-                </caption>
-                <TableHeader>
-                  <TableRow>
-                    {candidateColumns
-                      .filter((column) => column.key !== "email")
-                      .map((column) => (
-                        <SortableHeader
-                          key={column.key}
-                          column={column}
-                          sortField={search.sortBy}
-                          ascending={search.sortOrder === "asc"}
-                          onSort={changeSort}
-                        />
-                      ))}
-                    <TableHead scope="col">Ações</TableHead>
-                  </TableRow>
-                  <TableRow className="candidate-refresh-row">
-                    <TableHead colSpan={4} className="candidate-refresh-cell">
-                      <CandidateRefreshProgress updating={updating} />
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody aria-busy={updating}>
-                  {visibleCandidates.map((candidate) => (
-                    <TableRow key={candidate.id}>
-                      <TableCell>
-                        <CandidateIdentity candidate={candidate} />
-                      </TableCell>
-                      <TableCell className="candidate-phone">
-                        {candidate.phone || "Não informado"}
-                      </TableCell>
-                      <TableCell>{candidate.interestArea || "—"}</TableCell>
-                      <TableCell>
-                        <CandidateActions
-                          candidate={candidate}
-                          onDelete={openDelete}
-                          onDownload={handleDownload}
-                          downloading={downloading}
-                          search={search}
-                        />
-                      </TableCell>
+            <ScrollArea
+              className="candidate-results-scroll"
+              viewportProps={{
+                ref: listViewportRef,
+                role: "region",
+                "aria-label": "Resultados de candidatos",
+                tabIndex: 0,
+              }}
+            >
+              <div className="table-scroll">
+                <Table className="candidate-table">
+                  <caption className="sr-only">
+                    Candidatos cadastrados, contatos e ações
+                  </caption>
+                  <TableHeader>
+                    <TableRow>
+                      {candidateColumns
+                        .filter((column) => column.key !== "email")
+                        .map((column) => (
+                          <SortableHeader
+                            key={column.key}
+                            column={column}
+                            sortField={search.sortBy}
+                            ascending={search.sortOrder === "asc"}
+                            onSort={changeSort}
+                          />
+                        ))}
+                      <TableHead scope="col">Currículo</TableHead>
+                      <TableHead scope="col">Ações</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-            <div className="candidate-mobile-progress">
-              <CandidateRefreshProgress updating={updating} />
-            </div>
-            <div className="candidate-mobile-list" aria-busy={updating}>
-              {visibleCandidates.map((candidate) => (
-                <article className="candidate-mobile-card" key={candidate.id}>
-                  <CandidateIdentity candidate={candidate} heading />
-                  <dl>
-                    <div>
-                      <dt>Telefone</dt>
-                      <dd>{candidate.phone || "Não informado"}</dd>
+                    <TableRow className="candidate-refresh-row">
+                      <TableHead colSpan={5} className="candidate-refresh-cell">
+                        <CandidateRefreshProgress updating={updating} />
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody aria-busy={updating}>
+                    {visibleCandidates.map((candidate) => (
+                      <TableRow key={candidate.id}>
+                        <TableCell>
+                          <CandidateIdentity candidate={candidate} />
+                        </TableCell>
+                        <TableCell className="candidate-phone">
+                          {formatBrazilianPhone(candidate.phone)}
+                        </TableCell>
+                        <TableCell>{candidate.interestArea || "—"}</TableCell>
+                        <TableCell>
+                          <CandidateCurriculumStatus candidate={candidate} />
+                        </TableCell>
+                        <TableCell>
+                          <CandidateActions
+                            candidate={candidate}
+                            onDelete={openDelete}
+                            onDownload={handleDownload}
+                            downloading={downloading}
+                            search={search}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <div className="candidate-mobile-progress">
+                <CandidateRefreshProgress updating={updating} />
+              </div>
+              <div className="candidate-mobile-list" aria-busy={updating}>
+                {visibleCandidates.map((candidate) => (
+                  <article className="candidate-mobile-card" key={candidate.id}>
+                    <CandidateIdentity candidate={candidate} heading />
+                    <dl>
+                      <div>
+                        <dt>Telefone</dt>
+                        <dd>{formatBrazilianPhone(candidate.phone)}</dd>
+                      </div>
+                      <div>
+                        <dt>Área de interesse</dt>
+                        <dd>{candidate.interestArea || "Não informada"}</dd>
+                      </div>
+                    </dl>
+                    <div className="candidate-row-actions">
+                      <CandidateCurriculumStatus candidate={candidate} />
+                      <CandidateActions
+                        candidate={candidate}
+                        onDelete={openDelete}
+                        onDownload={handleDownload}
+                        downloading={downloading}
+                        search={search}
+                      />
                     </div>
-                    <div>
-                      <dt>Área de interesse</dt>
-                      <dd>{candidate.interestArea || "Não informada"}</dd>
-                    </div>
-                  </dl>
-                  <CandidateActions
-                    candidate={candidate}
-                    onDelete={openDelete}
-                    onDownload={handleDownload}
-                    downloading={downloading}
-                    search={search}
-                  />
-                </article>
-              ))}
-            </div>
+                  </article>
+                ))}
+              </div>
+            </ScrollArea>
           </>
         )}
         <div className="candidate-table-footer">
@@ -761,6 +788,17 @@ function CandidateIdentity({
   );
 }
 
+function CandidateCurriculumStatus({ candidate }: { candidate: Candidate }) {
+  return (
+    <Badge
+      variant="outline"
+      aria-label={candidate.hasCurriculum ? "Com currículo" : "Sem currículo"}
+    >
+      {candidate.hasCurriculum ? "PDF" : "Sem PDF"}
+    </Badge>
+  );
+}
+
 function CandidateActions({
   candidate,
   onDelete,
@@ -775,60 +813,52 @@ function CandidateActions({
   search: ListCandidatesQuery;
 }) {
   return (
-    <div className="candidate-row-actions">
-      <Badge
-        variant="outline"
-        aria-label={candidate.hasCurriculum ? "Com currículo" : "Sem currículo"}
-      >
-        {candidate.hasCurriculum ? "PDF" : "Sem PDF"}
-      </Badge>
-      <div className="table-actions">
+    <div className="table-actions">
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <Link
+              aria-label={`Ver detalhes de ${candidate.fullName}`}
+              className={buttonVariants({
+                size: "sm",
+                variant: "outline",
+              })}
+              params={{ candidateId: String(candidate.id) }}
+              search={search}
+              to="/candidates/$candidateId"
+            />
+          }
+        >
+          <Eye aria-hidden="true" data-icon="inline-start" />
+          Detalhes
+        </TooltipTrigger>
+        <TooltipContent>Ver detalhes</TooltipContent>
+      </Tooltip>
+      {candidate.hasCurriculum && (
         <Tooltip>
           <TooltipTrigger
-            render={
-              <Link
-                aria-label={`Ver detalhes de ${candidate.fullName}`}
-                className={buttonVariants({
-                  size: "sm",
-                  variant: "outline",
-                })}
-                params={{ candidateId: String(candidate.id) }}
-                search={search}
-                to="/candidates/$candidateId"
-              />
-            }
-          >
-            <Eye aria-hidden="true" data-icon="inline-start" />
-            Detalhes
-          </TooltipTrigger>
-          <TooltipContent>Ver detalhes</TooltipContent>
-        </Tooltip>
-        {candidate.hasCurriculum && (
-          <Tooltip>
-            <TooltipTrigger
-              aria-label={`Baixar currículo de ${candidate.fullName}`}
-              disabled={downloading}
-              render={<Button size="icon-sm" variant="outline" />}
-              onClick={() => onDownload(candidate)}
-            >
-              <FileDown aria-hidden="true" />
-            </TooltipTrigger>
-            <TooltipContent>
-              {downloading ? "Preparando download…" : "Baixar currículo"}
-            </TooltipContent>
-          </Tooltip>
-        )}
-        <Tooltip>
-          <TooltipTrigger
-            aria-label={`Excluir ${candidate.fullName}`}
+            aria-label={`Baixar currículo de ${candidate.fullName}`}
+            disabled={downloading}
             render={<Button size="icon-sm" variant="outline" />}
-            onClick={(event) => onDelete(candidate.id, event.currentTarget)}
+            onClick={() => onDownload(candidate)}
           >
-            <Trash2 aria-hidden="true" />
+            <FileDown aria-hidden="true" />
           </TooltipTrigger>
-          <TooltipContent>Excluir candidato</TooltipContent>
+          <TooltipContent>
+            {downloading ? "Preparando download…" : "Baixar currículo"}
+          </TooltipContent>
         </Tooltip>
-      </div>
+      )}
+      <Tooltip>
+        <TooltipTrigger
+          aria-label={`Excluir ${candidate.fullName}`}
+          render={<Button size="icon-sm" variant="outline" />}
+          onClick={(event) => onDelete(candidate.id, event.currentTarget)}
+        >
+          <Trash2 aria-hidden="true" />
+        </TooltipTrigger>
+        <TooltipContent>Excluir candidato</TooltipContent>
+      </Tooltip>
     </div>
   );
 }

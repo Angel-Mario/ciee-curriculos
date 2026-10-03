@@ -5,6 +5,13 @@ export default defineConfig({
     tsconfigPaths: true,
   },
   test: {
+    coverage: {
+      exclude: ["src/**/*.spec.ts", "src/database/orm/prisma/generated/**"],
+      include: ["src/**/*.ts"],
+      provider: "v8",
+      reporter: ["text", "html", "json-summary", "lcov"],
+      reportsDirectory: "coverage-e2e",
+    },
     globals: true,
     include: ["**/*.e2e-spec.ts"],
     root: "./",

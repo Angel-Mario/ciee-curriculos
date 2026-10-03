@@ -3,6 +3,73 @@ import { describe, expect, it } from "vitest";
 import { extractCandidateFields } from "./extract-candidate-fields.js";
 
 describe("PDF contact extraction", () => {
+  it.each([
+    [
+      "Ana Luiza Ferreira",
+      "Ana Luiza Ferreira\nDesenvolvedora Front-end Júnior",
+    ],
+    [
+      "Bruno Henrique Martins",
+      "Bruno\nHenrique\nMartins\nAnalista de Suporte Técnico",
+    ],
+    ["Camila Ribeiro Santos", "Camila Ribeiro Santos UX/UI Designer"],
+    ["Diego Almeida Costa", "Diego Almeida Costa\nDesenvolvedor Back-end Java"],
+    ["Fernanda Oliveira Lima", "Fernanda\nOliveira Lima\nAnalista Financeira"],
+    ["Gabriel Souza Nascimento", "Gabriel Souza\nNascimento\nTécnico em Redes"],
+    ["Helena Mendes Rocha", "Helena Mendes Rocha\nCientista de Dados Júnior"],
+    [
+      "Igor Carvalho Pereira",
+      "Igor Carvalho\nPereira\nDesenvolvedor Full Stack Pleno",
+    ],
+    [
+      "Juliana Barbosa Freitas",
+      "Juliana Barbosa\nFreitas\nAnalista de Recursos Humanos",
+    ],
+    [
+      "Lucas Teixeira Moraes",
+      "Lucas Teixeira Moraes\nEstagiário de Tecnologia da Informação",
+    ],
+  ])(
+    "extracts the complete name from the synthetic PDF header: %s",
+    (fullName, header) => {
+      const result = extractCandidateFields(
+        `CURRÍCULO SINTÉTICO - DADOS FICTÍCIOS PARA TESTE DE SOFTWARE Página 1\n${header}\nCONTATO\nCuritiba - PR\n(41) 90000-0101\ncontato@example.com\nRESUMO PROFISSIONAL\nExperiência em tecnologia.`
+      );
+
+      expect(result.data).toStrictEqual({
+        email: "contato@example.com",
+        fullName,
+        phone: "41900000101",
+      });
+      expect(result.missingFields).toStrictEqual([]);
+      expect(result.warnings).toStrictEqual([]);
+    }
+  );
+
+  it("does not use section content as a name after a document title", () => {
+    const result = extractCandidateFields(
+      "CURRÍCULO\nRESUMO PROFISSIONAL\nAna Souza\nana@example.com"
+    );
+
+    expect(result.data.fullName).toBeNull();
+  });
+
+  it("does not use a job title or location as a name", () => {
+    const result = extractCandidateFields(
+      "CURRÍCULO\nAnalista de Sistemas\nSão Paulo\nana@example.com"
+    );
+
+    expect(result.data.fullName).toBeNull();
+  });
+
+  it("keeps labeled names authoritative over header suggestions", () => {
+    const result = extractCandidateFields(
+      "CURRÍCULO\nBruno Henrique Martins\nAnalista de Sistemas\nNome completo: Ana Souza"
+    );
+
+    expect(result.data.fullName).toBe("Ana Souza");
+  });
+
   it("extracts a name from a header shared with location and phone", () => {
     const result = extractCandidateFields(
       "Angel Mario Roque Suárez Curitiba, PR, Brasil | +55 (41) 99742-9889\n" +

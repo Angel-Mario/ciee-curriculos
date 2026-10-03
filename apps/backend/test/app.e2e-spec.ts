@@ -19,9 +19,6 @@ describe("AppController (e2e)", () => {
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new StandardSchemaValidationPipe());
     generatedOpenApi = await createDocs(app, {
-      integrations: {
-        zod: { withFastify: false },
-      },
       title: "Generated API",
     });
     app.use(
@@ -36,7 +33,7 @@ describe("AppController (e2e)", () => {
   }
   beforeAll(startApplication);
 
-  it("generates authenticated OpenAPI docs and serves the Scalar reference", async () => {
+  it("generates OpenAPI docs and serves the Scalar reference", async () => {
     expect(generatedOpenApi.openapi).toMatch(/^3\./u);
     expect(generatedOpenApi.paths?.["/todos"]?.post?.requestBody).toBeDefined();
     const reference = await request(app.getHttpServer())
@@ -66,6 +63,24 @@ describe("AppController (e2e)", () => {
     expect(operation?.responses).toHaveProperty("413");
     expect(operation?.responses).toHaveProperty("415");
     expect(operation?.responses).toHaveProperty("503");
+  });
+
+  it("documents candidate response bodies and bulk deletion", () => {
+    const list = generatedOpenApi.paths["/candidates"]?.get?.responses["200"];
+    expect(list).toHaveProperty(
+      "content.application/json.schema.properties.items"
+    );
+    const created =
+      generatedOpenApi.paths["/candidates"]?.post?.responses["201"];
+    expect(created).toHaveProperty(
+      "content.application/json.schema.properties.curriculum"
+    );
+    expect(
+      generatedOpenApi.paths["/candidates"]?.delete?.requestBody
+    ).toHaveProperty("content.application/json.schema.properties.ids");
+    expect(
+      generatedOpenApi.paths["/candidates/import-pdf"]?.post?.responses["200"]
+    ).toHaveProperty("content.application/json.schema.properties.warnings");
   });
 
   it("returns 404 for an unknown route", async () => {

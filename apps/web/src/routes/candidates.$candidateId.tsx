@@ -25,6 +25,7 @@ import {
   getCurriculumDownloadUrl,
   getInitials,
 } from "@/lib/candidates";
+import { formatBrazilianPhone } from "@/lib/phone";
 
 export const Route = createFileRoute("/candidates/$candidateId")({
   component: CandidateDetailRoute,
@@ -186,7 +187,7 @@ function CandidateDetailPage() {
                     <a
                       href={`tel:${candidate.phone.replaceAll(/[^\d+]/gu, "")}`}
                     >
-                      {candidate.phone}
+                      {formatBrazilianPhone(candidate.phone)}
                     </a>
                   </dd>
                 </div>

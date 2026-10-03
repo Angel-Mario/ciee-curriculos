@@ -114,20 +114,22 @@ Por padrão, o backend atende em `http://localhost:3000`. As rotas da API usam o
 - `PUT /api/todos/:id`: atualiza `title`, `description` e/ou `completed`.
 - `DELETE /api/todos/:id`: exclui um item.
 - `POST /api/candidates`: cria um candidato com `fullName` e `email` obrigatórios; aceita `phone`, `interestArea` e `professionalSummary` opcionais, em JSON ou multipart com PDF opcional no campo `file`.
-- `GET /api/candidates`: lista candidatos e aceita `q` (ocorrências em nome **ou** e-mail), `sortBy` (`id`, `fullName`, `email`, `phone` ou `interestArea`) e `sortOrder` (`asc` ou `desc`). Sem parâmetros, ordena por ID decrescente.
+- `GET /api/candidates`: retorna `{ items, page, pageSize, pageCount, total }`; aceita `q` (nome **ou** e-mail), `sortBy` (`id`, `fullName`, `email`, `phone` ou `interestArea`), `sortOrder` (`asc` ou `desc`), `interestArea` e `hasCurriculum` (`all`, `yes`, `no`). `page` começa em 1 e `pageSize` aceita 1–100 (padrão 10). Sem parâmetros, ordena por ID decrescente.
 - `GET /api/candidates/:id`: consulta os dados do candidato ou retorna 404.
 - `GET /api/candidates/:id/curriculum/download`: retorna `{ "url": "..." }` quando o usuário solicita a descarga; retorna 404 se o candidato ou o currículo não existir.
 - `DELETE /api/candidates/:id`: exclui um candidato ou retorna 404.
 - `DELETE /api/candidates` com `{ "ids": [1, 2] }`: exclui até 100 candidatos; IDs repetidos são deduplicados e IDs inexistentes são ignorados. A resposta informa `deletedCount`.
 - `POST /api/candidates/import-pdf`: recebe um arquivo `file` em `multipart/form-data` e sugere nome, e-mail e telefone para revisão; não salva o candidato.
 
-Quando um PDF é enviado junto com a criação, o backend envia o objeto ao RustFS antes de gravar os dados no SQL Server. Se a gravação SQL falhar depois do upload, o objeto pode ficar órfão no bucket; faça limpeza operacional desses objetos se isso ocorrer. As respostas de criação e detalhe incluem apenas os metadados em `curriculum` ou `null`, e a listagem inclui `hasCurriculum`. A URL pública é construída e enviada somente ao solicitar `GET /api/candidates/:id/curriculum/download`.
+Quando um PDF é enviado junto com a criação, o backend envia o objeto ao RustFS antes de gravar os dados no SQL Server. Se a gravação SQL falhar, tenta remover o objeto enviado e preserva o erro original. Se essa limpeza também falhar, registra um aviso e o objeto pode ficar órfão; faça reconciliação operacional desses objetos. As respostas de criação e detalhe incluem apenas os metadados em `curriculum` ou `null`, e a listagem inclui `hasCurriculum`. A URL pública é construída e enviada somente ao solicitar `GET /api/candidates/:id/curriculum/download`.
 
-Os DTOs são validados com Zod por meio do pipe global do NestJS. Consulte <http://localhost:3000/docs> para ver o esquema OpenAPI gerado.
+Os contratos Zod em `packages/shared` validam o formulário, o cliente HTTP e o backend. O pipe global valida os DTOs; o controller de candidatos também valida explicitamente JSON, multipart e parâmetros de listagem. Campos desconhecidos são rejeitados. Consulte <http://localhost:3000/docs> para a referência interativa e <http://localhost:3000/openapi.json> para o contrato JSON, incluindo respostas de candidatos, paginação, importação e exclusão.
 
 O e-mail é normalizado para letras minúsculas e precisa ser único por candidato. Tentativas de cadastro com e-mail já utilizado retornam `409` com código `EMAIL_ALREADY_IN_USE`; a restrição de unicidade também é aplicada no SQL Server. A migration recusa emails duplicados já existentes sem remover registros.
 
-O telefone é normalizado tanto na importação do PDF quanto no cadastro: `+55 (41) 99742-9889` vira `+5541997429889`. Números sem código internacional conservam apenas os dígitos, sem presumir um país. O cadastro aceita de 10 a 15 dígitos e a máscara visual deve ser aplicada pelo frontend.
+O telefone aceita apenas números brasileiros com DDD válido: fixo com 10 dígitos (assinante iniciado em 2–5) ou celular com 11 dígitos (assinante iniciado em 9). Tanto na importação quanto no cadastro, `+55 (41) 99742-9889` vira `41997429889`. O frontend mostra +55 como prefixo fixo e envia os dígitos nacionais. Outros países, DDDs inexistentes e comprimentos inválidos são rejeitados; telefone vazio é armazenado como `null`.
+
+Erros de validação retornam 400; arquivo acima de 5 MB retorna 413; conteúdo sem assinatura PDF retorna 415; falha na leitura retorna 422 (`PDF_READ_FAILED`). E-mail duplicado retorna 409, registro ausente retorna 404 e falha de armazenamento retorna 503 (`STORAGE_UNAVAILABLE`). Erros inesperados recebem a resposta 500 padrão do NestJS, sem expor detalhes internos ao cliente. A importação não persiste dados e permite continuar o cadastro manual.
 
 ## Testes
 
@@ -153,6 +155,7 @@ Os e2e criam candidatos com dados únicos e removem somente os IDs criados pela 
 pnpm --filter backend test
 pnpm --filter backend test:e2e
 pnpm --filter backend test:cov
+pnpm --filter backend test:e2e --coverage
 ```
 
-Os testes unitários usam Vitest; os testes end-to-end usam `vitest.config.e2e.ts`.
+Os testes unitários usam Vitest; os testes end-to-end usam `vitest.config.e2e.ts`. Os relatórios incluem todos os arquivos TypeScript de `src`, exceto testes e Prisma Client gerado. Cobertura unitária e e2e são medidas separadamente em `coverage` e `coverage-e2e`. O teste de bootstrap executa `main.ts` compilado em outro processo e verifica seu funcionamento, mas esse processo não é instrumentado pelo relatório V8 do Vitest.

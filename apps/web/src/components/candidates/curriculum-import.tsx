@@ -1,6 +1,7 @@
 import { Checkbox } from "@ciee-curriculos/ui/components/checkbox";
 import { LoaderCircle, Upload, X } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { DragEvent } from "react";
 
 import { PdfFileIcon } from "@/components/pdf-file-icon";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,40 @@ export function CurriculumImport({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importButtonRef = useRef<HTMLButtonElement>(null);
   const reviewRef = useRef<HTMLHeadingElement>(null);
+  const dragDepthRef = useRef(0);
+  const [dragging, setDragging] = useState(false);
+  const uploadDisabled = saving || importing;
+
+  const resetDrag = () => {
+    dragDepthRef.current = 0;
+    setDragging(false);
+  };
+
+  const handleDragEnter = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    if (uploadDisabled || !event.dataTransfer.types.includes("Files")) {
+      return;
+    }
+    dragDepthRef.current += 1;
+    setDragging(true);
+  };
+
+  const handleDragLeave = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+    if (dragDepthRef.current === 0) {
+      setDragging(false);
+    }
+  };
+
+  const handleDrop = async (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    resetDrag();
+    if (uploadDisabled) {
+      return;
+    }
+    await selectPdf(event.dataTransfer.files[0]);
+  };
 
   useEffect(() => {
     if (importResult) {
@@ -62,47 +97,64 @@ export function CurriculumImport({
           ref={fileInputRef}
           type="file"
         />
-        {file ? (
-          <div className="selected-file">
-            {importing ? (
-              <LoaderCircle aria-hidden="true" className="animate-spin" />
-            ) : (
-              <PdfFileIcon />
-            )}
-            <div className="selected-file-info">
-              <span className="selected-file-name">{file.name}</span>
-              <span className="selected-file-size">
-                {formatFileSize(file.size)}
-              </span>
+        <div
+          className="curriculum-dropzone"
+          role="presentation"
+          data-dragging={dragging && !uploadDisabled}
+          data-has-file={Boolean(file)}
+          aria-busy={importing}
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDragOver={(event) => {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = uploadDisabled ? "none" : "copy";
+          }}
+          onDrop={handleDrop}
+        >
+          {file ? (
+            <div className="selected-file">
+              {importing ? (
+                <LoaderCircle aria-hidden="true" className="animate-spin" />
+              ) : (
+                <PdfFileIcon />
+              )}
+              <div className="selected-file-info">
+                <span className="selected-file-name">{file.name}</span>
+                <span className="selected-file-size">
+                  {formatFileSize(file.size)}
+                </span>
+              </div>
+              <Button
+                aria-label={
+                  importing
+                    ? "Cancelar importação do currículo"
+                    : "Remover currículo"
+                }
+                disabled={saving}
+                onClick={handleRemoveFile}
+                size="icon-sm"
+                type="button"
+                variant="ghost"
+              >
+                <X aria-hidden="true" />
+              </Button>
             </div>
+          ) : (
             <Button
-              aria-label={
-                importing
-                  ? "Cancelar importação do currículo"
-                  : "Remover currículo"
-              }
-              disabled={saving}
-              onClick={handleRemoveFile}
-              size="icon-sm"
+              aria-describedby="curriculum-help"
+              className="h-auto min-h-32 w-full flex-col px-6 py-6 whitespace-normal"
+              disabled={uploadDisabled}
+              onClick={() => fileInputRef.current?.click()}
+              ref={importButtonRef}
               type="button"
               variant="ghost"
             >
-              <X aria-hidden="true" />
+              <Upload aria-hidden="true" data-icon="inline-start" />
+              <span>Arraste e solte seu currículo aqui</span>
+              <span>ou clique para selecionar um PDF de até 5 MB</span>
             </Button>
-          </div>
-        ) : (
-          <Button
-            aria-describedby="curriculum-help"
-            disabled={saving}
-            onClick={() => fileInputRef.current?.click()}
-            ref={importButtonRef}
-            type="button"
-            variant="outline"
-          >
-            <Upload aria-hidden="true" data-icon="inline-start" />
-            Importar currículo (PDF)
-          </Button>
-        )}
+          )}
+        </div>
         {file && (
           <div className="curriculum-storage-option">
             <label

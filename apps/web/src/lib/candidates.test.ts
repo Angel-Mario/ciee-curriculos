@@ -14,11 +14,9 @@ import {
 vi.mock(import("@/env"), () => ({
   env: { VITE_SERVER_URL: "http://localhost:3000/" },
 }));
-
 afterEach(() => {
   vi.unstubAllGlobals();
 });
-
 it("requests the backend API and returns its empty page", async () => {
   const page = { items: [], page: 1, pageCount: 0, pageSize: 10, total: 0 };
   const fetchRequest = vi
@@ -26,7 +24,6 @@ it("requests the backend API and returns its empty page", async () => {
     .mockResolvedValue(Response.json(page));
   vi.stubGlobal("fetch", fetchRequest);
   const controller = new AbortController();
-
   await expect(
     listCandidates(DEFAULT_LIST_CANDIDATES_QUERY, controller.signal)
   ).resolves.toStrictEqual(page);
@@ -34,29 +31,24 @@ it("requests the backend API and returns its empty page", async () => {
   expect(String(url)).toMatch(/^http:\/\/localhost:3000\/api\/candidates\?/u);
   expect(init?.signal).toBe(controller.signal);
 });
-
 it("propagates connection failures without returning demonstration data", async () => {
   const error = new TypeError("Failed to fetch");
   vi.stubGlobal("fetch", vi.fn<typeof fetch>().mockRejectedValue(error));
-
   await expect(listCandidates(DEFAULT_LIST_CANDIDATES_QUERY)).rejects.toBe(
     error
   );
 });
-
 it("deletes candidates through the backend API", async () => {
   const fetchRequest = vi
     .fn<typeof fetch>()
     .mockResolvedValue(new Response(null, { status: 204 }));
   vi.stubGlobal("fetch", fetchRequest);
-
   await expect(deleteCandidate(7)).resolves.toBeUndefined();
   expect(fetchRequest).toHaveBeenCalledWith(
     "http://localhost:3000/api/candidates/7",
     expect.objectContaining({ method: "DELETE" })
   );
 });
-
 it("sends normalized national digits and shared field transforms as JSON", async () => {
   const fetchRequest = vi
     .fn<typeof fetch>()
@@ -79,7 +71,6 @@ it("sends normalized national digits and shared field transforms as JSON", async
     professionalSummary: null,
   });
 });
-
 it("sends normalized multipart fields without serializing null as text", async () => {
   const fetchRequest = vi
     .fn<typeof fetch>()
@@ -108,7 +99,6 @@ it("sends normalized multipart fields without serializing null as text", async (
   expect(body.has("professionalSummary")).toBe(false);
   expect(body.get("file")).toBeInstanceOf(File);
 });
-
 it("rejects invalid phones before making a request", () => {
   const fetchRequest = vi.fn<typeof fetch>();
   vi.stubGlobal("fetch", fetchRequest);
@@ -123,7 +113,6 @@ it("rejects invalid phones before making a request", () => {
   ).toThrow();
   expect(fetchRequest).not.toHaveBeenCalled();
 });
-
 it.each([
   "+55 55 41 99999-1234",
   "+55 (20) 99999-1234",
@@ -146,3 +135,46 @@ it.each([
     }
   }
 );
+it.each([
+  [
+    { message: "Já existe um candidato com este e-mail." },
+    "Já existe um candidato com este e-mail.",
+  ],
+  [
+    {
+      message: [
+        { message: "Informe o nome." },
+        { message: "E-mail inválido." },
+      ],
+    },
+    "Informe o nome. E-mail inválido.",
+  ],
+  [[{ message: "Telefone inválido." }], "Telefone inválido."],
+  [
+    { message: { internal: "unexpected" } },
+    "A solicita\u00E7\u00E3o falhou (400).",
+  ],
+])("shows readable HTTP validation errors: %o", async (body, message) => {
+  vi.stubGlobal(
+    "fetch",
+    vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(Response.json(body, { status: 400 }))
+  );
+  await expect(deleteCandidate(7)).rejects.toMatchObject({
+    message,
+    status: 400,
+  });
+});
+it("preserves the HTTP status when an error response is not JSON", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response("Bad gateway", { status: 502 }))
+  );
+  await expect(deleteCandidate(7)).rejects.toMatchObject({
+    message: "A solicita\u00E7\u00E3o falhou (502).",
+    status: 502,
+  });
+});

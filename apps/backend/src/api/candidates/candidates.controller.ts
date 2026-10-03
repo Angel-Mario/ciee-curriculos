@@ -37,6 +37,14 @@ import {
 } from "@nestjs/swagger";
 import type { Request as ExpressRequest } from "express";
 
+import {
+  candidateResponseSchema,
+  candidatePageResponseSchema,
+  pdfImportResponseSchema,
+  deleteCandidatesRequestSchema,
+  deletedCountResponseSchema,
+  deletedCandidateResponseSchema,
+} from "./candidates.openapi.js";
 import { CandidatesService } from "./candidates.service.js";
 import type { CandidatePdf } from "./candidates.service.js";
 import { CreateCandidateDto } from "./dto/create-candidate.dto.js";
@@ -129,7 +137,10 @@ export class CandidatesController {
     },
     summary: "/api/candidates",
   })
-  @ApiCreatedResponse({ description: "Candidate created successfully" })
+  @ApiCreatedResponse({
+    description: "Candidate created successfully",
+    schema: candidateResponseSchema,
+  })
   @ApiConflictResponse({
     description: "Email already registered (EMAIL_ALREADY_IN_USE)",
   })
@@ -197,9 +208,23 @@ export class CandidatesController {
     required: false,
   })
   @ApiQuery({ name: "interestArea", required: false })
-  @ApiQuery({ name: "page", required: false, type: Number })
-  @ApiQuery({ name: "pageSize", required: false, type: Number })
-  @ApiOkResponse({ description: "Candidates retrieved successfully" })
+  @ApiQuery({
+    name: "page",
+    required: false,
+    schema: { default: 1, maximum: 2_147_483_647, minimum: 1, type: "integer" },
+  })
+  @ApiQuery({
+    name: "pageSize",
+    required: false,
+    schema: { default: 10, maximum: 100, minimum: 1, type: "integer" },
+  })
+  @ApiBadRequestResponse({
+    description: "Invalid search, sorting, filters or pagination",
+  })
+  @ApiOkResponse({
+    description: "Candidates retrieved successfully",
+    schema: candidatePageResponseSchema,
+  })
   @ApiInternalServerErrorResponse({
     description: "Candidates could not be retrieved",
   })
@@ -217,9 +242,14 @@ export class CandidatesController {
   }
 
   @Delete()
+  @ApiServiceUnavailableResponse({
+    description: "Storage unavailable (STORAGE_UNAVAILABLE)",
+  })
+  @ApiBody({ schema: deleteCandidatesRequestSchema })
   @ApiOperation({ summary: "/api/candidates" })
   @ApiOkResponse({
     description: "Candidates deleted; returns the deleted count",
+    schema: deletedCountResponseSchema,
   })
   @ApiBadRequestResponse({
     description: "IDs must contain 1 to 100 valid candidate IDs",
@@ -256,7 +286,10 @@ export class CandidatesController {
     })
   )
   @ApiOperation({ summary: "/api/candidates/import-pdf" })
-  @ApiOkResponse({ description: "Extracted suggestions for manual review" })
+  @ApiOkResponse({
+    description: "Extracted suggestions for manual review",
+    schema: pdfImportResponseSchema,
+  })
   @ApiBadRequestResponse({
     description: "File is missing, too large, or multipart data is invalid",
   })
@@ -316,7 +349,10 @@ export class CandidatesController {
 
   @Get(":id")
   @ApiOperation({ summary: "/api/candidates/{id}" })
-  @ApiOkResponse({ description: "Candidate retrieved successfully" })
+  @ApiOkResponse({
+    description: "Candidate retrieved successfully",
+    schema: candidateResponseSchema,
+  })
   @ApiBadRequestResponse({ description: "Candidate ID is invalid" })
   @ApiNotFoundResponse({ description: "Candidate does not exist" })
   @ApiInternalServerErrorResponse({
@@ -336,8 +372,14 @@ export class CandidatesController {
   }
 
   @Delete(":id")
+  @ApiServiceUnavailableResponse({
+    description: "Storage unavailable (STORAGE_UNAVAILABLE)",
+  })
   @ApiOperation({ summary: "/api/candidates/{id}" })
-  @ApiOkResponse({ description: "Candidate deleted successfully" })
+  @ApiOkResponse({
+    description: "Candidate deleted successfully",
+    schema: deletedCandidateResponseSchema,
+  })
   @ApiBadRequestResponse({ description: "Candidate ID is invalid" })
   @ApiNotFoundResponse({ description: "Candidate does not exist" })
   @ApiInternalServerErrorResponse({

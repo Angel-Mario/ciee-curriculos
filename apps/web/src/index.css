@@ -232,6 +232,60 @@ h3 {
 .candidate-list-card {
   container-name: candidate-list;
   container-type: inline-size;
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+.app-shell:has(.candidate-list-card) {
+  height: 100dvh;
+  min-height: 700px;
+  grid-template-rows: 64px minmax(0, 1fr);
+}
+.app-main:has(.candidate-list-card),
+.page-content:has(.candidate-list-card) {
+  min-height: 0;
+}
+.page-content:has(.candidate-list-card) {
+  display: flex;
+  flex-direction: column;
+}
+.candidate-list-loading {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+.candidate-results-scroll {
+  min-height: 0;
+  flex: 1;
+}
+.candidate-results-scroll [data-slot="scroll-area-viewport"] {
+  overscroll-behavior-y: contain;
+}
+.candidate-results-scroll [data-slot="table-container"] {
+  overflow: visible;
+}
+.candidate-results-scroll .candidate-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--card);
+}
+.candidate-list-card > .filter-bar,
+.candidate-list-card > .candidate-sort-bar,
+.candidate-list-card .candidate-table-footer {
+  flex-shrink: 0;
+}
+.candidate-list-card .candidate-table-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  border-radius: 0 0 calc(var(--radius) + 4px) calc(var(--radius) + 4px);
+  background: var(--card);
+}
+.candidate-list-card > [data-slot="empty"] {
+  overflow-y: auto;
 }
 .candidate-table {
   width: 100%;
@@ -247,7 +301,10 @@ h3 {
   width: auto;
 }
 .candidate-table th:nth-child(4) {
-  width: 280px;
+  width: 100px;
+}
+.candidate-table th:nth-child(5) {
+  width: 240px;
 }
 .candidate-table thead th {
   height: 44px;
@@ -475,6 +532,30 @@ h3 {
   align-items: flex-start;
   gap: 12px;
 }
+.curriculum-dropzone {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease;
+}
+.curriculum-dropzone[data-has-file="true"] {
+  border-style: solid;
+}
+.curriculum-dropzone .selected-file {
+  border: 0;
+  background: transparent;
+}
+.curriculum-dropzone[data-dragging="true"] {
+  border-color: var(--primary);
+  background: var(--accent);
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
 .import-status {
   color: var(--muted-foreground);
   font-size: 13px;
@@ -551,7 +632,8 @@ h3 {
 }
 .feedback-panel ul {
   margin: 8px 0 0;
-  padding-left: 20px;
+  padding: 0;
+  list-style: none;
 }
 .warning-list {
   color: var(--destructive);
@@ -737,6 +819,18 @@ h3 {
   }
 }
 @media (max-width: 767px) {
+  .app-shell:has(.candidate-list-card) {
+    height: auto;
+    min-height: 100dvh;
+    grid-template-rows: 60px auto 1fr;
+  }
+  .candidate-results-scroll {
+    flex: none;
+  }
+  .candidate-results-scroll [data-slot="scroll-area-viewport"] {
+    height: auto;
+    overscroll-behavior-y: auto;
+  }
   .app-shell {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: 60px auto 1fr;

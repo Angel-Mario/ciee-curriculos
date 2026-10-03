@@ -10,6 +10,7 @@ import {
   createCandidateSchema,
   curriculumDownloadSchema,
 } from "@ciee-curriculos/shared";
+import { z } from "zod";
 
 import { env } from "@/env";
 
@@ -39,6 +40,26 @@ export class ApiError extends Error {
 
 const API_BASE = `${env.VITE_SERVER_URL.replace(/\/+$/u, "")}/api`;
 
+const apiErrorMessageSchema = z.union([
+  z.string().min(1),
+  z.array(z.union([z.string(), z.object({ message: z.string() })])),
+]);
+
+function readErrorMessage(body: unknown): string | undefined {
+  const envelope = z.object({ message: apiErrorMessageSchema }).safeParse(body);
+  const parsed = envelope.success
+    ? envelope.data.message
+    : apiErrorMessageSchema.safeParse(body).data;
+  if (typeof parsed === "string") {
+    return parsed;
+  }
+  return (
+    parsed
+      ?.map((issue) => (typeof issue === "string" ? issue : issue.message))
+      .join(" ") || undefined
+  );
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}/${path}`, {
     ...init,
@@ -53,14 +74,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!response.ok) {
     let message = `A solicitação falhou (${response.status}).`;
     try {
-      const body = (await response.json()) as {
-        message?: string | string[];
-      };
-      if (body.message) {
-        message = Array.isArray(body.message)
-          ? body.message.join(" ")
-          : body.message;
-      }
+      message = readErrorMessage(await response.json()) ?? message;
     } catch {
       // Keep the HTTP status message when the response has no JSON body.
     }

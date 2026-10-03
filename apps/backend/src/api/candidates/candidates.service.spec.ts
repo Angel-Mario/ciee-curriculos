@@ -19,7 +19,7 @@ describe("candidate persistence service", () => {
       (key) => `http://localhost:9000/curricula/${key}`
     ),
     deleteFile: vi.fn<() => Promise<void>>(),
-    uploadFile: vi.fn<() => Promise<void>>(),
+    uploadFile: vi.fn<(buffer: Buffer, key: string) => Promise<void>>(),
   };
   const service = new CandidatesService(
     { prisma } as unknown as DbService,
@@ -148,6 +148,52 @@ describe("candidate persistence service", () => {
         interestArea: { contains: "Design" },
       },
     });
+  });
+
+  it("cleans up uploaded files when SQL persistence fails and preserves the original error", async () => {
+    const error = new Error("SQL unavailable");
+    prisma.candidate.create.mockRejectedValueOnce(error);
+    await expect(
+      service.create(
+        {
+          email: "ana@example.com",
+          fullName: "Ana",
+          interestArea: null,
+          phone: null,
+          professionalSummary: null,
+        },
+        {
+          buffer: Buffer.from("%PDF-"),
+          originalName: "resume.pdf",
+          size: 5,
+        }
+      )
+    ).rejects.toBe(error);
+    expect(s3.deleteFile).toHaveBeenCalledWith(
+      s3.uploadFile.mock.calls.at(-1)?.[1]
+    );
+  });
+
+  it("does not persist a candidate when uploading the PDF fails", async () => {
+    const error = new Error("Storage unavailable");
+    s3.uploadFile.mockRejectedValueOnce(error);
+    await expect(
+      service.create(
+        {
+          email: "ana@example.com",
+          fullName: "Ana",
+          interestArea: null,
+          phone: null,
+          professionalSummary: null,
+        },
+        {
+          buffer: Buffer.from("%PDF-"),
+          originalName: "resume.pdf",
+          size: 5,
+        }
+      )
+    ).rejects.toBe(error);
+    expect(prisma.candidate.create).not.toHaveBeenCalled();
   });
 
   it("looks up one candidate by ID", async () => {

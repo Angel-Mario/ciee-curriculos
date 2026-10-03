@@ -1,6 +1,7 @@
 import { Logger, StandardSchemaValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { apiReference } from "@scalar/nestjs-api-reference";
+import type { Request, Response } from "express";
 
 import { AppModule } from "./app.module.js";
 import { env } from "./config/env.js";
@@ -21,21 +22,17 @@ async function bootstrap() {
   app.useGlobalPipes(new StandardSchemaValidationPipe());
   app.enableShutdownHooks();
   const docsPath = "/docs";
+  const document = await createDocs(app);
+  app
+    .getHttpAdapter()
+    .get("/openapi.json", (_request: Request, response: Response) =>
+      response.json(document)
+    );
   app.use(
     docsPath,
     apiReference({
-      content: await createDocs(app, {
-        description: "backend NestJS application",
-        integrations: {
-          zod: {
-            withFastify: false,
-          },
-        },
-        title: "Backend API",
-        version: "1.0.0",
-      }),
-
-      pageTitle: "Backend API Docs",
+      content: document,
+      pageTitle: "CIEE Currículos API",
       theme: "default",
     })
   );

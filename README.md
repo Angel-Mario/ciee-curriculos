@@ -33,6 +33,7 @@ O modelo contém uma senha destinada apenas ao desenvolvimento. Substitua-a por 
 ```bash
 pnpm db:start
 pnpm prisma:generate
+pnpm prisma:migrate:deploy
 ```
 
 `pnpm db:start` inicia o serviço `sqlserver` definido no Docker Compose; a verificação de saúde cria `backend_db` se o banco ainda não existir. Se você usar outra instância do SQL Server, configure a conexão em `apps/backend/.env` e confirme que o banco de dados já existe.
@@ -47,7 +48,15 @@ pnpm dev
 - API: <http://localhost:3000/api>
 - Documentação interativa da API: <http://localhost:3000/docs>
 
-O backend oferece uma rota de exemplo e operações CRUD de `Todo` em `/api/todos`.
+O fluxo principal permite cadastrar candidatos manualmente ou importar sugestões de um PDF, revisar os mesmos campos e salvar. A listagem oferece busca, filtros, ordenação, paginação e acesso aos detalhes. O PDF é opcional, inclusive quando sua leitura falha. Há também rotas `Todo` preservadas da base inicial.
+
+## Tecnologias e versões
+
+Versões declaradas no workspace: React 19.2.8, Vite 8.2.2, TanStack Router 1.170.32, TanStack Query 5.104.0, NestJS 12.0.1, Prisma 7.10.0, Zod 4.5.4 e pdf-parse 2.4.5. O ambiente usa Node.js 22+, pnpm 11.8.0, SQL Server no Docker Compose e RustFS compatível com S3. O lockfile fixa as versões resolvidas.
+
+Para testar a importação, selecione [examples/curriculo-ficticio.pdf](examples/curriculo-ficticio.pdf) no formulário de novo candidato. Confira nome, e-mail e telefone sugeridos antes de salvar. PDFs digitalizados não têm OCR; textos complexos ou contatos ambíguos podem exigir preenchimento manual. O relato de desenvolvimento e uso de IA está em [DESENVOLVIMENTO.md](DESENVOLVIMENTO.md).
+
+Para anexar e armazenar PDFs, inicie também RustFS e prepare o bucket conforme o [README do backend](apps/backend/README.md). A documentação interativa está em `/docs` e o contrato JSON em `/openapi.json`.
 
 ## Variáveis de ambiente
 
@@ -120,6 +129,7 @@ apps/
   web/       Aplicação React, Vite e TanStack Router
 packages/
   config/    Pacote de configuração do workspace
+  shared/    Contratos, tipos e validações Zod usados nos dois lados
   ui/        Componentes React compartilhados e estilos
 ```
 
@@ -128,8 +138,12 @@ packages/
 ```bash
 pnpm check
 pnpm check-types
+pnpm test
 pnpm --filter backend test
+pnpm --filter web test:cov
+pnpm --filter backend test:cov
 pnpm --filter backend test:e2e
+pnpm --filter backend test:e2e --coverage
 ```
 
-Os comandos de teste são executados no pacote do backend; não há um script `test` na raiz. Consulte [apps/backend/README.md](apps/backend/README.md) para mais detalhes.
+`pnpm test` executa os testes unitários dos pacotes. Os e2e são separados e precisam de SQL Server e RustFS disponíveis. A cobertura inclui arquivos sem testes: backend em `apps/backend/coverage`, integração em `apps/backend/coverage-e2e` e frontend em `apps/web/coverage`. Cada relatório tem HTML, resumo JSON e LCOV. Não some percentuais de suítes diferentes. O frontend possui testes de API, cache e hooks, mas ainda não tem testes automatizados de componentes. Consulte [apps/backend/README.md](apps/backend/README.md) para preparar o banco dedicado de testes e [QUALIDADE.md](QUALIDADE.md) para os resultados e limites da revisão.

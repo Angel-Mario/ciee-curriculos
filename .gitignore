@@ -52,6 +52,7 @@ lerna-debug.log*
 
 # Testing
 coverage
+coverage-e2e
 .nyc_output
 
 # Misc

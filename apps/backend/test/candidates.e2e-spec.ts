@@ -1,4 +1,6 @@
 import "dotenv/config";
+import { readFileSync } from "node:fs";
+
 import { INestApplication, StandardSchemaValidationPipe } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import request from "supertest";
@@ -86,7 +88,7 @@ describe("Candidates API (e2e)", () => {
     const listed = await request(app.getHttpServer())
       .get("/api/candidates")
       .expect(200);
-    expect(listed.body).toEqual(
+    expect(listed.body.items).toEqual(
       expect.arrayContaining([expect.objectContaining({ id })])
     );
 
@@ -129,14 +131,14 @@ describe("Candidates API (e2e)", () => {
       .query({ q: "Ana", sortBy: "fullName", sortOrder: "asc" })
       .expect(200);
     expect(
-      byName.body.map((candidate: { id: number }) => candidate.id)
+      byName.body.items.map((candidate: { id: number }) => candidate.id)
     ).toContain(nameMatchId);
 
     const byEmail = await request(app.getHttpServer())
       .get("/api/candidates")
       .query({ q: email })
       .expect(200);
-    expect(byEmail.body).toEqual([
+    expect(byEmail.body.items).toEqual([
       expect.objectContaining({ email, id: emailOnlyMatchId }),
     ]);
   });
@@ -150,6 +152,47 @@ describe("Candidates API (e2e)", () => {
     await request(app.getHttpServer())
       .get("/api/candidates/not-an-id")
       .expect(400);
+  });
+
+  it.each(["+1 212 555 1234", "+55 20 99999-1234", "41899991234"])(
+    "rejects invalid Brazilian phones over HTTP: %s",
+    async (phone) => {
+      await request(app.getHttpServer())
+        .post("/api/candidates")
+        .send({
+          email: `${crypto.randomUUID()}@example.com`,
+          fullName: "Invalid phone",
+          phone,
+        })
+        .expect(400);
+    }
+  );
+
+  it.each([
+    { page: 0 },
+    { pageSize: 101 },
+    { sortBy: "unknown" },
+    { hasCurriculum: "invalid" },
+  ])("rejects invalid pagination and filters: %o", async (query) => {
+    await request(app.getHttpServer())
+      .get("/api/candidates")
+      .query(query)
+      .expect(400);
+  });
+
+  it("imports the fictional PDF included in the delivery", async () => {
+    const fixture = readFileSync(
+      new URL("../../../examples/curriculo-ficticio.pdf", import.meta.url)
+    );
+    const response = await request(app.getHttpServer())
+      .post("/api/candidates/import-pdf")
+      .attach("file", fixture, "curriculo-ficticio.pdf")
+      .expect(200);
+    expect(response.body.data).toEqual({
+      email: "ana.souza@example.com",
+      fullName: "Ana Souza",
+      phone: "41999991234",
+    });
   });
 
   it("normalizes contact fields and rejects emails already registered", async () => {
@@ -210,7 +253,7 @@ describe("Candidates API (e2e)", () => {
     const listed = await request(app.getHttpServer())
       .get("/api/candidates")
       .expect(200);
-    expect(listed.body).toEqual(
+    expect(listed.body.items).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ hasCurriculum: true, id }),
       ])

@@ -95,6 +95,11 @@ it("boots the compiled application through main.ts", async () => {
   expect(response.status).toBe(200);
   expect(await response.text()).toBe("Hello World!");
 
+  const specResponse = await fetch(`http://127.0.0.1:${port}/openapi.json`);
+  expect(specResponse.status).toBe(200);
+  const spec = await specResponse.json();
+  expect(spec.paths).toHaveProperty("/api/candidates");
+
   const corsResponse = await fetch(`http://127.0.0.1:${port}/api`, {
     headers: { Origin: origin },
   });

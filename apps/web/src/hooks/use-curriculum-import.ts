@@ -52,6 +52,7 @@ export function useCurriculumImport({
       return;
     }
 
+    importControllerRef.current?.abort();
     const controller = new AbortController();
     importControllerRef.current = controller;
     onError(null);

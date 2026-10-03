@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import {
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from "@nestjs/common";
 
@@ -30,6 +31,8 @@ interface CandidateWithCurriculum {
 
 @Injectable()
 export class CandidatesService {
+  private readonly logger = new Logger(CandidatesService.name);
+
   constructor(
     private readonly db: DbService,
     private readonly s3Service: S3Service
@@ -77,6 +80,15 @@ export class CandidatesService {
         include: { curriculumFile: true },
       });
     } catch (error) {
+      if (storageKey) {
+        try {
+          await this.s3Service.deleteFile(storageKey);
+        } catch {
+          this.logger.warn(
+            "Failed to clean up a curriculum after candidate creation failed."
+          );
+        }
+      }
       if (
         typeof error === "object" &&
         error !== null &&
