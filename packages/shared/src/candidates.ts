@@ -39,6 +39,10 @@ export const createCandidateSchema = z
 
 export const listCandidatesQuerySchema = z
   .object({
+    hasCurriculum: z.enum(["all", "yes", "no"]).default("all"),
+    interestArea: z.string().trim().max(200).optional(),
+    page: z.coerce.number().int().min(1).max(2_147_483_647).default(1),
+    pageSize: z.coerce.number().int().min(1).max(100).default(10),
     q: z.string().trim().max(200).optional(),
     sortBy: z.enum(CANDIDATE_SORT_FIELDS).default("id"),
     sortOrder: z.enum(["asc", "desc"]).default("desc"),
@@ -84,11 +88,20 @@ export const pdfImportResultSchema = z.object({
   warnings: z.array(z.object({ code: z.string(), message: z.string() })),
 });
 
+export const candidatePageSchema = z.object({
+  items: z.array(candidateSchema),
+  page: z.number().int().positive(),
+  pageCount: z.number().int().nonnegative(),
+  pageSize: z.number().int().positive(),
+  total: z.number().int().nonnegative(),
+});
+
 export const curriculumDownloadSchema = z.object({ url: z.url() });
 
 export type CreateCandidateInput = z.infer<typeof createCandidateSchema>;
 export type ListCandidatesQuery = z.infer<typeof listCandidatesQuerySchema>;
 export type DeleteCandidatesInput = z.infer<typeof deleteCandidatesSchema>;
 export type Candidate = z.infer<typeof candidateSchema>;
+export type CandidatePage = z.infer<typeof candidatePageSchema>;
 export type Curriculum = z.infer<typeof curriculumSchema>;
 export type PdfImportResult = z.infer<typeof pdfImportResultSchema>;

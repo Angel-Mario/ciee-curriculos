@@ -1,6 +1,7 @@
 export {
   CANDIDATE_SORT_FIELDS,
   candidateSchema,
+  candidatePageSchema,
   createCandidateSchema,
   curriculumDownloadSchema,
   deleteCandidatesSchema,
@@ -9,6 +10,7 @@ export {
 } from "./candidates.js";
 export type {
   Candidate,
+  CandidatePage,
   CreateCandidateInput,
   Curriculum,
   DeleteCandidatesInput,

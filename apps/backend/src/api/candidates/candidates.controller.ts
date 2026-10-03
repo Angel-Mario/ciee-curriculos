@@ -178,6 +178,14 @@ export class CandidatesController {
     required: false,
   })
   @ApiQuery({ enum: ["asc", "desc"], name: "sortOrder", required: false })
+  @ApiQuery({
+    enum: ["all", "yes", "no"],
+    name: "hasCurriculum",
+    required: false,
+  })
+  @ApiQuery({ name: "interestArea", required: false })
+  @ApiQuery({ name: "page", required: false, type: Number })
+  @ApiQuery({ name: "pageSize", required: false, type: Number })
   @ApiOkResponse({ description: "Candidates retrieved successfully" })
   @ApiInternalServerErrorResponse({
     description: "Candidates could not be retrieved",
@@ -187,13 +195,12 @@ export class CandidatesController {
     if (!validation.success) {
       throw new BadRequestException(validation.error.issues);
     }
-    return this.candidatesService
-      .findAll(validation.data)
-      .then((candidates) =>
-        candidates.map((candidate) =>
-          this.candidatesService.toListResponse(candidate)
-        )
-      );
+    return this.candidatesService.findAll(validation.data).then((result) => ({
+      ...result,
+      items: result.items.map((candidate) =>
+        this.candidatesService.toListResponse(candidate)
+      ),
+    }));
   }
 
   @Delete()

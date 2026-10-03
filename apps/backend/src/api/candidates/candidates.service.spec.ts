@@ -7,6 +7,7 @@ import { CandidatesService } from "./candidates.service.js";
 describe("candidate persistence service", () => {
   const prisma = {
     candidate: {
+      count: vi.fn<() => Promise<number>>(),
       create: vi.fn<() => Promise<unknown>>(),
       deleteMany: vi.fn<() => Promise<{ count: number }>>(),
       findMany: vi.fn<() => Promise<unknown[]>>(),
@@ -28,6 +29,7 @@ describe("candidate persistence service", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     prisma.candidate.findUnique.mockResolvedValue(null);
+    prisma.candidate.count.mockResolvedValue(0);
   });
 
   it("creates a candidate through Prisma", async () => {
@@ -52,11 +54,28 @@ describe("candidate persistence service", () => {
     prisma.candidate.findMany.mockResolvedValue([]);
 
     await expect(
-      service.findAll({ q: undefined, sortBy: "id", sortOrder: "desc" })
-    ).resolves.toStrictEqual([]);
+      service.findAll({
+        hasCurriculum: "all",
+        interestArea: undefined,
+        page: 1,
+        pageSize: 10,
+        q: undefined,
+        sortBy: "id",
+        sortOrder: "desc",
+      })
+    ).resolves.toStrictEqual({
+      items: [],
+      page: 1,
+      pageCount: 0,
+      pageSize: 10,
+      total: 0,
+    });
     expect(prisma.candidate.findMany).toHaveBeenCalledWith({
       include: { curriculumFile: true },
       orderBy: { id: "desc" },
+      skip: 0,
+      take: 10,
+      where: {},
     });
   });
 
@@ -99,14 +118,34 @@ describe("candidate persistence service", () => {
 
   it("filters name or email occurrences and sorts by requested field", async () => {
     prisma.candidate.findMany.mockResolvedValue([]);
+    prisma.candidate.count.mockResolvedValue(0);
 
-    await service.findAll({ q: "ana", sortBy: "email", sortOrder: "asc" });
+    await service.findAll({
+      hasCurriculum: "yes",
+      interestArea: "Design",
+      page: 2,
+      pageSize: 5,
+      q: "ana",
+      sortBy: "email",
+      sortOrder: "asc",
+    });
 
     expect(prisma.candidate.findMany).toHaveBeenCalledWith({
       include: { curriculumFile: true },
-      orderBy: { email: "asc" },
+      orderBy: [{ email: "asc" }, { id: "asc" }],
+      skip: 5,
+      take: 5,
       where: {
         OR: [{ fullName: { contains: "ana" } }, { email: { contains: "ana" } }],
+        curriculumFile: { isNot: null },
+        interestArea: { contains: "Design" },
+      },
+    });
+    expect(prisma.candidate.count).toHaveBeenCalledWith({
+      where: {
+        OR: [{ fullName: { contains: "ana" } }, { email: { contains: "ana" } }],
+        curriculumFile: { isNot: null },
+        interestArea: { contains: "Design" },
       },
     });
   });

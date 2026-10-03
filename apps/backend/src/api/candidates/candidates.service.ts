@@ -93,20 +93,50 @@ export class CandidatesService {
   }
 
   findAll(query: ListCandidatesQuery) {
-    return this.db.prisma.candidate.findMany({
-      include: { curriculumFile: true },
-      orderBy: { [query.sortBy]: query.sortOrder },
+    const where: {
+      OR?: { fullName?: { contains: string }; email?: { contains: string } }[];
+      interestArea?: { contains: string };
+      curriculumFile?: { is?: null; isNot?: null };
+    } = {
       ...(query.q
         ? {
-            where: {
-              OR: [
-                { fullName: { contains: query.q } },
-                { email: { contains: query.q } },
-              ],
-            },
+            OR: [
+              { fullName: { contains: query.q } },
+              { email: { contains: query.q } },
+            ],
           }
         : {}),
-    });
+      ...(query.interestArea
+        ? { interestArea: { contains: query.interestArea } }
+        : {}),
+    };
+    if (query.hasCurriculum === "yes") {
+      where.curriculumFile = { isNot: null };
+    } else if (query.hasCurriculum === "no") {
+      where.curriculumFile = { is: null };
+    }
+    const orderBy =
+      query.sortBy === "id"
+        ? { id: query.sortOrder }
+        : [{ [query.sortBy]: query.sortOrder }, { id: query.sortOrder }];
+    const skip = (query.page - 1) * query.pageSize;
+
+    return Promise.all([
+      this.db.prisma.candidate.findMany({
+        include: { curriculumFile: true },
+        orderBy,
+        skip,
+        take: query.pageSize,
+        where,
+      }),
+      this.db.prisma.candidate.count({ where }),
+    ]).then(([items, total]) => ({
+      items,
+      page: query.page,
+      pageCount: Math.ceil(total / query.pageSize),
+      pageSize: query.pageSize,
+      total,
+    }));
   }
 
   findById(id: number) {
