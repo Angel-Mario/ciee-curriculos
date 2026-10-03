@@ -30,6 +30,12 @@ export const env = createEnv({
       .enum(["development", "production", "test"])
       .default("development"),
     PORT: z.string().transform(Number).default(3000),
+    S3_ACCESS_KEY: z.string().default("rustfs_user"),
+    S3_BUCKET: z.string().default("curricula"),
+    S3_ENDPOINT: z.url().default("http://localhost:9000"),
+    S3_ENDPOINT_PUBLIC: z.url().default("http://localhost:9000"),
+    S3_REGION: z.string().default("us-east-1"),
+    S3_SECRET_KEY: z.string().default("rustfs_password_secure"),
     SQLSERVER_DATABASE: z.string().default("backend_db"),
     SQLSERVER_ENCRYPT: z
       .string()

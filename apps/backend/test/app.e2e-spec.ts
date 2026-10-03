@@ -50,6 +50,24 @@ describe("AppController (e2e)", () => {
     expect(response.text).toBe("Hello World!");
   });
 
+  it("documents PDF upload as multipart binary and excludes files from JSON", () => {
+    const operation = generatedOpenApi.paths["/candidates"]?.post;
+    const body = operation?.requestBody;
+    if (!body || "$ref" in body) {
+      throw new Error("Candidate request body must be documented inline.");
+    }
+    expect(Object.keys(body.content)[0]).toBe("multipart/form-data");
+    expect(body.content["multipart/form-data"]?.schema).toMatchObject({
+      properties: { file: { format: "binary", type: "string" } },
+      required: ["email", "fullName"],
+    });
+    const jsonSchema = body.content["application/json"]?.schema;
+    expect(jsonSchema).not.toHaveProperty("properties.file");
+    expect(operation?.responses).toHaveProperty("413");
+    expect(operation?.responses).toHaveProperty("415");
+    expect(operation?.responses).toHaveProperty("503");
+  });
+
   it("returns 404 for an unknown route", async () => {
     await request(app.getHttpServer()).get("/__missing_route__").expect(404);
   });

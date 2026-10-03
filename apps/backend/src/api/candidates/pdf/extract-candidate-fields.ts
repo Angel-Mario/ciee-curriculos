@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { normalizePhone } from "../normalize-phone.js";
+
 export const extractedFieldNames = ["fullName", "email", "phone"] as const;
 
 export type ExtractedFieldName = (typeof extractedFieldNames)[number];
@@ -12,23 +14,35 @@ const emailSchema = z.email();
 const emailPattern = /[\w.!#$%&'*+/=?^`{|}~-]+@[\w-]+(?:\.[\w-]+)+/gu;
 const phonePattern = /(?:\+?\d[\d \t().-]{7,}\d)/gu;
 const sectionPattern =
-  /^(?:curr[ií]culo|resume|perfil|objetivo|experi[eê]ncia|forma[cç][aã]o|educa[cç][aã]o|habilidades|compet[eê]ncias|contato)\b/iu;
+  /^(?:curr[ií]culo|resume|resumo|perfil|objetivo|experi[eê]ncia|forma[cç][aã]o|educa[cç][aã]o|habilidades|compet[eê]ncias|contato|stack|projetos|certifica[cç][oõ]es)\b/iu;
 const nameLabelPattern =
   /^(?:nome(?: completo)?|name)\s*[:-]\s*(?<value>.+)$/iu;
 const nameLabelReplacePattern =
   /^(?:nome(?: completo)?|name)\s*[:-]\s*(?<value>.+)$/giu;
 const contactLabelPattern = /(?:telefone|celular|phone|contato)\s*[:-]?/iu;
+const linkPattern =
+  /(?:https?:\/\/|www\.|github|linkedin|portf[oó]lio|\.[a-z]{2,}(?:\/|\b))/iu;
+const namePattern = /^[\p{L}\p{M}]+(?:[ '\u2019-][\p{L}\p{M}]+)+$/u;
+const inlinePhonePattern = /\s*(?:\||[–—])?\s*\+?\d[\d \t().-]{7,}\d\s*$/u;
+const brazilianLocationPattern =
+  /\s+[\p{L}\p{M}.-]+,\s*[A-Z]{2},\s*(?:Brasil|Brazil)\s*$/u;
 
 function unique<T>(values: T[]): T[] {
   return [...new Set(values)];
 }
 
 function normalizeName(line: string): string | null {
-  const candidate = line.replaceAll(nameLabelReplacePattern, "$<value>").trim();
+  const candidate = line
+    .replaceAll(nameLabelReplacePattern, "$<value>")
+    .replace(inlinePhonePattern, "")
+    .replace(brazilianLocationPattern, "")
+    .trim();
   if (
     candidate.length === 0 ||
     candidate.length > 200 ||
     candidate.includes("@") ||
+    linkPattern.test(candidate) ||
+    !namePattern.test(candidate) ||
     /\d/u.test(candidate) ||
     sectionPattern.test(candidate)
   ) {
@@ -54,7 +68,7 @@ export function extractCandidateFields(text: string): {
   );
   const phoneMatches = unique(
     [...text.matchAll(phonePattern)]
-      .map(([value]) => value.trim())
+      .map(([value]) => normalizePhone(value))
       .filter((value) => {
         const digits = value.replaceAll(/\D/gu, "");
         return digits.length >= 10 && digits.length <= 15;
@@ -62,9 +76,16 @@ export function extractCandidateFields(text: string): {
   );
 
   const labelledName = lines.find((line) => nameLabelPattern.test(line));
+  const firstSectionIndex = lines.findIndex((line) =>
+    sectionPattern.test(line)
+  );
+  const headerLines = lines.slice(
+    0,
+    firstSectionIndex === -1 ? 10 : Math.min(firstSectionIndex, 10)
+  );
   const nameCandidates = labelledName
     ? [normalizeName(labelledName)]
-    : lines
+    : headerLines
         .filter((line) => !contactLabelPattern.test(line))
         .map(normalizeName)
         .filter((value): value is string => value !== null)

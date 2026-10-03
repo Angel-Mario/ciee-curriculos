@@ -3,6 +3,34 @@ import { describe, expect, it } from "vitest";
 import { extractCandidateFields } from "./extract-candidate-fields.js";
 
 describe("PDF contact extraction", () => {
+  it("extracts a name from a header shared with location and phone", () => {
+    const result = extractCandidateFields(
+      "Angel Mario Roque Suárez Curitiba, PR, Brasil | +55 (41) 99742-9889\n" +
+        "Portfólio: angelmario-portfolio.vercel.app E-mail: angelmarioroquesuarez@gmail.com\n" +
+        "GitHub: github.com/Angel-Mario LinkedIn: linkedin.com/in/angel-mario-roque-suarez\n" +
+        "RESUMO PROFISSIONAL\nDesenvolvedor Fullstack"
+    );
+
+    expect(result.data).toStrictEqual({
+      email: "angelmarioroquesuarez@gmail.com",
+      fullName: "Angel Mario Roque Suárez",
+      phone: "+5541997429889",
+    });
+    expect(result.missingFields).toStrictEqual([]);
+    expect(result.warnings).toStrictEqual([]);
+  });
+
+  it("leaves the name missing when only links and section content are available", () => {
+    const result = extractCandidateFields(
+      "GitHub: github.com/example LinkedIn: linkedin.com/in/example\n" +
+        "ana@example.com\nRESUMO PROFISSIONAL\nDesenvolvedor Fullstack"
+    );
+
+    expect(result.data.fullName).toBeNull();
+    expect(result.missingFields).toContain("fullName");
+    expect(result.warnings[0]?.code).toBe("PARTIAL_EXTRACTION");
+  });
+
   it("extracts labeled contact information from text", () => {
     expect(
       extractCandidateFields(
@@ -12,7 +40,7 @@ describe("PDF contact extraction", () => {
       data: {
         email: "ana@example.com",
         fullName: "Ana Souza",
-        phone: "+55 (41) 99999-1234",
+        phone: "+5541999991234",
       },
       missingFields: [],
       warnings: [],
