@@ -15,6 +15,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@ciee-curriculos/ui/components/tooltip";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowDown,
@@ -31,7 +32,7 @@ import {
   UsersRound,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { CandidateListSkeleton } from "@/components/candidate-loading";
 import {
@@ -66,13 +67,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { deleteCandidateMutationOptions } from "@/lib/candidate-mutations";
+import { candidateListOptions } from "@/lib/candidate-queries";
 import {
   candidateColumns,
   compareCandidates,
   isCandidateSortField,
 } from "@/lib/candidate-sort";
 import type { CandidateSortField } from "@/lib/candidate-sort";
-import { deleteCandidate, formatDate, listCandidates } from "@/lib/candidates";
+import { formatDate } from "@/lib/candidates";
 import type { Candidate } from "@/lib/candidates";
 
 export const Route = createFileRoute("/candidates/")({
@@ -80,12 +83,28 @@ export const Route = createFileRoute("/candidates/")({
   head: () => ({ meta: [{ title: "Candidatos | CIEE/PR" }] }),
 });
 const PAGE_SIZE = 5;
+const EMPTY_CANDIDATES: Candidate[] = [];
 
 function CandidatesPage() {
-  const [candidates, setCandidates] = useState<Candidate[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [usingMockData, setUsingMockData] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const candidateQuery = useQuery(
+    candidateListOptions({
+      hasCurriculum: "all",
+      interestArea: undefined,
+      page: 1,
+      pageSize: 100,
+      q: undefined,
+      sortBy: "id",
+      sortOrder: "desc",
+    })
+  );
+  const deleteMutation = useMutation(
+    deleteCandidateMutationOptions(queryClient)
+  );
+  const candidates = candidateQuery.data?.items ?? EMPTY_CANDIDATES;
+  const loading = candidateQuery.isPending;
+  const usingMockData = candidateQuery.data?.usingMockData ?? false;
+  const loadError = candidateQuery.error?.message ?? null;
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [sortAscending, setSortAscending] = useState(true);
@@ -93,37 +112,9 @@ function CandidatesPage() {
   const [candidateToDelete, setCandidateToDelete] = useState<number | null>(
     null
   );
-  const [deleting, setDeleting] = useState(false);
+  const deleting = deleteMutation.isPending;
   const searchRef = useRef<HTMLInputElement>(null);
   const deleteTriggerRef = useRef<HTMLButtonElement | null>(null);
-
-  useEffect(() => {
-    let isActive = true;
-    const load = async () => {
-      try {
-        const result = await listCandidates();
-        if (isActive) {
-          setCandidates(result.candidates);
-          setUsingMockData(result.usingMockData);
-        }
-      } catch (error) {
-        if (isActive) {
-          setLoadError(
-            error instanceof Error
-              ? error.message
-              : "Não foi possível carregar os candidatos."
-          );
-        }
-      }
-      if (isActive) {
-        setLoading(false);
-      }
-    };
-    void load();
-    return () => {
-      isActive = false;
-    };
-  }, []);
 
   const filteredCandidates = useMemo(() => {
     const query = search.trim().toLocaleLowerCase("pt-BR");
@@ -179,12 +170,8 @@ function CandidatesPage() {
     if (candidateToDelete === null) {
       return;
     }
-    setDeleting(true);
     try {
-      await deleteCandidate(candidateToDelete);
-      setCandidates((current) =>
-        current.filter((candidate) => candidate.id !== candidateToDelete)
-      );
+      await deleteMutation.mutateAsync(candidateToDelete);
       setPage(
         Math.min(
           currentPage,
@@ -202,7 +189,6 @@ function CandidatesPage() {
             : "Não foi possível remover o candidato. Tente novamente.",
       });
     }
-    setDeleting(false);
   };
   const openDelete = (id: number, trigger: HTMLButtonElement) => {
     deleteTriggerRef.current = trigger;

@@ -2,7 +2,10 @@ import type {
   Candidate,
   CreateCandidateInput,
   PdfImportResult,
+  ListCandidatesQuery,
+  CandidatePage,
 } from "@ciee-curriculos/shared";
+import { candidatePageSchema } from "@ciee-curriculos/shared";
 
 import { env } from "@/env";
 
@@ -245,24 +248,71 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
-export async function listCandidates(): Promise<{
-  candidates: Candidate[];
-  usingMockData: boolean;
-}> {
+export async function listCandidates(
+  query: ListCandidatesQuery,
+  signal?: AbortSignal
+): Promise<
+  CandidatePage & {
+    usingMockData: boolean;
+  }
+> {
   try {
-    const candidates = await request<Candidate[]>("candidates");
+    const search = new URLSearchParams();
+    for (const [key, value] of Object.entries(query)) {
+      if (value !== undefined && value !== "all") {
+        search.set(key, String(value));
+      }
+    }
+    const rawPage = await request<unknown>(`candidates?${search.toString()}`, {
+      signal,
+    });
+    const page = candidatePageSchema.parse(rawPage);
     setMockMode(false);
-    return { candidates, usingMockData: false };
+    return { ...page, usingMockData: false };
   } catch (error) {
     if (!(error instanceof TypeError)) {
       throw error;
     }
     setMockMode(true);
-    return { candidates: getMockCandidates(), usingMockData: true };
+    const allCandidates = getMockCandidates();
+    const normalizedQuery = query.q?.toLocaleLowerCase("pt-BR");
+    const filteredCandidates = allCandidates
+      .filter((candidate) =>
+        normalizedQuery
+          ? [candidate.fullName, candidate.email].some((value) =>
+              value.toLocaleLowerCase("pt-BR").includes(normalizedQuery)
+            )
+          : true
+      )
+      .filter((candidate) =>
+        query.interestArea
+          ? candidate.interestArea
+              ?.toLocaleLowerCase("pt-BR")
+              .includes(query.interestArea.toLocaleLowerCase("pt-BR"))
+          : true
+      )
+      .filter((candidate) =>
+        query.hasCurriculum === "all"
+          ? true
+          : Boolean(candidate.hasCurriculum) === (query.hasCurriculum === "yes")
+      );
+    const start = (query.page - 1) * query.pageSize;
+    const items = filteredCandidates.slice(start, start + query.pageSize);
+    return {
+      items,
+      page: query.page,
+      pageCount: Math.ceil(filteredCandidates.length / query.pageSize),
+      pageSize: query.pageSize,
+      total: filteredCandidates.length,
+      usingMockData: true,
+    };
   }
 }
 
-export function getCandidate(id: number): Promise<Candidate> {
+export function getCandidate(
+  id: number,
+  signal?: AbortSignal
+): Promise<Candidate> {
   if (isMockMode()) {
     const candidate = getMockCandidates().find((item) => item.id === id);
     if (!candidate) {
@@ -270,7 +320,7 @@ export function getCandidate(id: number): Promise<Candidate> {
     }
     return Promise.resolve(candidate);
   }
-  return request<Candidate>(`candidates/${id}`);
+  return request<Candidate>(`candidates/${id}`, { signal });
 }
 
 export function createCandidate(

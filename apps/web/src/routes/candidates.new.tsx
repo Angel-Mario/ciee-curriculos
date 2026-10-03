@@ -10,6 +10,7 @@ import {
 import { Input } from "@ciee-curriculos/ui/components/input";
 import { Textarea } from "@ciee-curriculos/ui/components/textarea";
 import { toast } from "@ciee-curriculos/ui/components/toast";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   createFileRoute,
   Link,
@@ -38,12 +39,8 @@ import {
   FieldLabel,
   FieldDescription,
 } from "@/components/ui/field";
-import {
-  createCandidate,
-  formatFileSize,
-  importPdf,
-  interestAreas,
-} from "@/lib/candidates";
+import { createCandidateMutationOptions } from "@/lib/candidate-mutations";
+import { formatFileSize, importPdf, interestAreas } from "@/lib/candidates";
 import type { CandidateInput, PdfImportResult } from "@/lib/candidates";
 
 export const Route = createFileRoute("/candidates/new")({
@@ -69,13 +66,17 @@ function NewCandidatePage() {
   const reviewRef = useRef<HTMLHeadingElement>(null);
   const errorRef = useRef<HTMLParagraphElement>(null);
   const savedRef = useRef(false);
+  const queryClient = useQueryClient();
   const [fieldErrors, setFieldErrors] = useState<
     Partial<Record<keyof CandidateInput, string>>
   >({});
   const [form, setForm] = useState<CandidateInput>(EMPTY_FORM);
   const [file, setFile] = useState<File | undefined>();
   const [storeCurriculum, setStoreCurriculum] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const createMutation = useMutation(
+    createCandidateMutationOptions(queryClient)
+  );
+  const saving = createMutation.isPending;
   const [importing, setImporting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [importResult, setImportResult] = useState<PdfImportResult | null>(
@@ -212,18 +213,20 @@ function NewCandidatePage() {
       });
       return;
     }
-    setSaving(true);
     try {
-      const candidate = await createCandidate(
-        { ...form, fullName: form.fullName.trim(), email: form.email.trim() },
-        storeCurriculum ? file : undefined
-      );
+      const candidate = await createMutation.mutateAsync({
+        input: {
+          ...form,
+          fullName: form.fullName.trim(),
+          email: form.email.trim(),
+        },
+        file: storeCurriculum ? file : undefined,
+      });
       toast.add({
         type: "success",
         title: "Candidato cadastrado com sucesso.",
       });
       savedRef.current = true;
-      setSaving(false);
       await navigate({
         params: { candidateId: String(candidate.id) },
         to: "/candidates/$candidateId",
@@ -234,7 +237,6 @@ function NewCandidatePage() {
           ? error.message
           : "Não foi possível salvar o candidato."
       );
-      setSaving(false);
     }
   };
 

@@ -1,4 +1,5 @@
 import { toast } from "@ciee-curriculos/ui/components/toast";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowLeft,
@@ -9,20 +10,18 @@ import {
   Mail,
   Phone,
 } from "lucide-react";
-import { useEffect, useState } from "react";
 
 import { CandidateDetailSkeleton } from "@/components/candidate-loading";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
+import { candidateDetailOptions } from "@/lib/candidate-queries";
 import {
   formatDate,
   formatFileSize,
   getCurriculumDownloadUrl,
-  getCandidate,
   getInitials,
 } from "@/lib/candidates";
-import type { Candidate } from "@/lib/candidates";
 
 export const Route = createFileRoute("/candidates/$candidateId")({
   component: CandidateDetailRoute,
@@ -36,41 +35,26 @@ function CandidateDetailRoute() {
 
 function CandidateDetailPage() {
   const { candidateId } = Route.useParams();
-  const [candidate, setCandidate] = useState<Candidate | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [downloading, setDownloading] = useState(false);
   const parsedId = Number(candidateId);
   const invalidId = !Number.isSafeInteger(parsedId) || parsedId < 1;
-
-  useEffect(() => {
-    let isActive = true;
-    const loadCandidate = async () => {
-      try {
-        const result = await getCandidate(parsedId);
-        if (isActive) {
-          setCandidate(result);
-        }
-      } catch (loadError) {
-        if (isActive) {
-          setError(
-            loadError instanceof Error
-              ? loadError.message
-              : "Não foi possível carregar este candidato."
-          );
-        }
+  const candidateQuery = useQuery({
+    ...candidateDetailOptions(parsedId),
+    enabled: !invalidId,
+  });
+  const candidate = candidateQuery.data;
+  const loading = candidateQuery.isPending;
+  const error = candidateQuery.error?.message ?? null;
+  const downloadMutation = useMutation({
+    mutationFn: async () => {
+      const rawUrl = await getCurriculumDownloadUrl(parsedId);
+      const url = getDownloadUrl(rawUrl);
+      if (!url) {
+        throw new Error("A URL de download recebida é inválida.");
       }
-      if (isActive) {
-        setLoading(false);
-      }
-    };
-    if (!invalidId) {
-      loadCandidate();
-    }
-    return () => {
-      isActive = false;
-    };
-  }, [invalidId, parsedId]);
+      return url;
+    },
+  });
+  const downloading = downloadMutation.isPending;
 
   if (invalidId) {
     return (
@@ -123,9 +107,6 @@ function CandidateDetailPage() {
 
   const { curriculum } = candidate;
   const downloadCurriculum = async () => {
-    if (downloading) {
-      return;
-    }
     const downloadTab = window.open("about:blank", "_blank");
     if (!downloadTab) {
       toast.add({
@@ -135,18 +116,10 @@ function CandidateDetailPage() {
       return;
     }
     downloadTab.opener = null;
-    setDownloading(true);
-    let downloadError: unknown;
-    let url: string | null | undefined;
     try {
-      const rawUrl = await getCurriculumDownloadUrl(candidate.id);
-      url = getDownloadUrl(rawUrl);
-    } catch (requestError: unknown) {
-      downloadError = requestError;
-    }
-    setDownloading(false);
-
-    if (downloadError !== undefined) {
+      const url = await downloadMutation.mutateAsync();
+      downloadTab.location.href = url;
+    } catch (downloadError: unknown) {
       downloadTab.close();
       toast.add({
         type: "error",
@@ -155,17 +128,7 @@ function CandidateDetailPage() {
             ? downloadError.message
             : "Não foi possível baixar o currículo.",
       });
-      return;
     }
-    if (!url) {
-      downloadTab.close();
-      toast.add({
-        type: "error",
-        title: "A URL de download recebida é inválida.",
-      });
-      return;
-    }
-    downloadTab.location.href = url;
   };
 
   return (

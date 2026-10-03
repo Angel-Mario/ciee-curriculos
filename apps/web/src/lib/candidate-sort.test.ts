@@ -1,7 +1,6 @@
-import assert from "node:assert/strict";
-import { test } from "node:test";
+import { describe, expect, it } from "vitest";
 
-import { candidateColumns, compareCandidates } from "./candidate-sort.ts";
+import { candidateColumns, compareCandidates } from "./candidate-sort";
 import type { Candidate } from "./candidates";
 
 const first: Candidate = {
@@ -23,36 +22,44 @@ const second: Candidate = {
   professionalSummary: null,
 };
 
-test("every visible candidate field sorts in both directions", () => {
-  for (const { key } of candidateColumns) {
-    assert.ok(compareCandidates(first, second, key, true) < 0, key);
-    assert.ok(compareCandidates(first, second, key, false) > 0, key);
-  }
-});
-
-test("dates sort chronologically across years and time zones", () => {
-  const earlier = { ...first, createdAt: "2026-01-01T02:30:00Z" };
-  const later = { ...second, createdAt: "2025-12-31T23:45:00-03:00" };
-  assert.ok(compareCandidates(earlier, later, "createdAt", true) < 0);
-});
-
-test("missing and invalid values stay last in either direction", () => {
-  const missing = {
-    ...second,
-    createdAt: "invalid",
-    interestArea: null,
-    phone: null,
-  };
-  for (const key of ["phone", "interestArea", "createdAt"] as const) {
-    for (const ascending of [true, false]) {
-      assert.ok(compareCandidates(first, missing, key, ascending) < 0);
-      assert.ok(compareCandidates(missing, first, key, ascending) > 0);
+describe("candidate sorting", () => {
+  it("sorts every visible candidate field in both directions", () => {
+    for (const { key } of candidateColumns) {
+      expect(compareCandidates(first, second, key, true)).toBeLessThan(0);
+      expect(compareCandidates(first, second, key, false)).toBeGreaterThan(0);
     }
-  }
-});
+  });
 
-test("equivalent phone formats and accented names have stable ties", () => {
-  const equivalent = { ...second, fullName: "Ána", phone: "41900000001" };
-  assert.equal(compareCandidates(first, equivalent, "phone", true), -1);
-  assert.equal(compareCandidates(first, equivalent, "phone", false), -1);
+  it("sorts dates chronologically across years and time zones", () => {
+    const earlier = { ...first, createdAt: "2026-01-01T02:30:00Z" };
+    const later = { ...second, createdAt: "2025-12-31T23:45:00-03:00" };
+    expect(compareCandidates(earlier, later, "createdAt", true)).toBeLessThan(
+      0
+    );
+  });
+
+  it("keeps missing and invalid values last in either direction", () => {
+    const missing = {
+      ...second,
+      createdAt: "invalid",
+      interestArea: null,
+      phone: null,
+    };
+    for (const key of ["phone", "interestArea", "createdAt"] as const) {
+      for (const ascending of [true, false]) {
+        expect(compareCandidates(first, missing, key, ascending)).toBeLessThan(
+          0
+        );
+        expect(
+          compareCandidates(missing, first, key, ascending)
+        ).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it("keeps equivalent phone formats and accented names stable", () => {
+    const equivalent = { ...second, fullName: "Ána", phone: "41900000001" };
+    expect(compareCandidates(first, equivalent, "phone", true)).toBe(-1);
+    expect(compareCandidates(first, equivalent, "phone", false)).toBe(-1);
+  });
 });
