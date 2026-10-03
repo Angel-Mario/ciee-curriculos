@@ -1,0 +1,64 @@
+\pranchadiagrama{D01 -- Casos de uso}{use-case-diagram.png}
+{O usuário cadastra, revisa e consulta candidatos e acessa seus currículos.
+O cliente da API também pode realizar exclusões em lote. Os dois caminhos
+de cadastro compartilham o formulário e as regras de validação.}{fig:casos}
+
+\pranchadiagrama{D02 -- Componentes e integrações}{component-diagram.png}
+{A interface React consulta a API NestJS. Os serviços separam candidatos,
+extração de PDF, acesso ao SQL Server com Prisma e operações no armazenamento
+S3/RustFS. O navegador acessa diretamente o arquivo ao receber sua URL.}{fig:componentes}
+
+\pranchadiagrama{D03 -- Modelo de dados SQL Server}{database-erd.png}
+{Um candidato possui zero ou um arquivo. O e-mail é único e a referência
+ao candidato em curriculum\_files também é única. A cascata SQL remove os
+metadados; o serviço coordena a remoção do objeto no armazenamento.}{fig:erd}
+
+\pranchadiagrama{D04 -- Importação e revisão de PDF}{pdf-import-sequence.png}
+{A API valida e lê o PDF em memória e retorna sugestões, campos ausentes
+e avisos. A interface permite revisar o resultado. Essa operação não cria
+candidatos nem guarda arquivos, e o cadastro manual continua disponível.}{fig:importacao}
+
+\pranchadiagrama{D05 -- Implantação local com Compose}{deployment-diagram.png}
+{O ambiente reúne frontend servido por Nginx, API NestJS, SQL Server e RustFS.
+O Compose coordena inicialização do bucket, migrations e volumes. As portas
+locais permitem avaliar a interface, a API e o armazenamento.}{fig:implantacao}
+
+\pranchadiagrama{D06 -- Cadastro manual}{manual-registration-sequence.png}
+{O formulário envia os dados sem exigir PDF. A API valida, normaliza o e-mail
+e persiste o candidato, com proteção contra duplicidade. Após salvar,
+a interface atualiza o cache e abre a tela de detalhes.}{fig:cadastro-manual}
+
+\pranchadiagrama{D07 -- Consulta filtrada e paginada}{candidate-list-sequence.png}
+{A interface envia busca, filtros, ordenação e parâmetros de página.
+O serviço consulta itens e total com os mesmos filtros no SQL Server.
+A resposta contém resultados e metadados de paginação.}{fig:listagem}
+
+\pranchadiagrama{D08 -- Consulta de detalhes}{candidate-details-sequence.png}
+{A API consulta o candidato e retorna os campos cadastrados e os metadados
+do PDF, quando existente. A chave interna de armazenamento não é exposta.
+Um registro ausente recebe resposta específica.}{fig:detalhes}
+
+\pranchadiagrama{D09 -- Cadastro com arquivo opcional}{candidate-save-sequence.png}
+{Guardar o PDF é uma escolha explícita após revisar os dados. Com arquivo,
+o backend faz upload e cria candidato e metadados; se SQL falhar, tenta
+remover o objeto enviado. Sem arquivo, o cadastro permanece disponível.}{fig:cadastro-arquivo}
+
+\pranchadiagrama{D10 -- Download do currículo}{curriculum-download-sequence.png}
+{O backend verifica candidato e metadados e retorna a URL pública configurada
+para o ambiente local. O frontend valida o protocolo HTTP/HTTPS e o navegador
+solicita o PDF diretamente ao armazenamento.}{fig:download}
+
+\pranchadiagrama{D11 -- Exclusão individual}{candidate-delete-sequence.png}
+{A interface pede confirmação. A API consulta o candidato, remove o arquivo
+associado e depois o registro SQL. Uma falha na remoção do arquivo impede
+a etapa de exclusão no banco.}{fig:exclusao}
+
+\pranchadiagrama{D12 -- Exclusão em lote pela API}{candidate-bulk-delete-sequence.png}
+{A operação valida até 100 IDs, remove duplicatas e considera os candidatos
+existentes. O serviço remove seus arquivos antes da etapa SQL e informa
+a quantidade excluída. Esse recurso é disponibilizado pela API.}{fig:exclusao-lote}
+
+\pranchadiagrama{D13 -- Descarte de alterações}{discard-changes-sequence.png}
+{O formulário confirma a saída quando há alterações. O usuário pode
+permanecer ou descartar os dados. Ao desmontar, a interface cancela a
+importação ativa; a leitura do PDF não exige limpeza de dados persistidos.}{fig:descarte}

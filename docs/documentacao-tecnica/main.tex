@@ -1,0 +1,156 @@
+\documentclass[fontsize=11pt,a4paper,oneside,parskip=half,
+ headings=normal,captions=tableheading]{scrartcl}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazilian]{babel}
+\usepackage{lmodern}
+\usepackage{tgheros}
+\ifdefined\pdfmapfile\pdfmapfile{+qhv.map}\fi
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage{microtype}
+\usepackage[margin=22mm,headheight=16pt,headsep=7mm,footskip=11mm]{geometry}
+\usepackage{graphicx}
+\usepackage{pdflscape}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage[table]{xcolor}
+\usepackage{scrlayer-scrpage}
+\usepackage{hyperref}
+\usepackage{bookmark}
+
+\definecolor{navy}{HTML}{1A2B3D}
+\definecolor{accent}{HTML}{176B83}
+\definecolor{muted}{HTML}{586777}
+\definecolor{paperblue}{HTML}{EDF3F7}
+\definecolor{tableline}{HTML}{D6E0E7}
+\hypersetup{colorlinks=true,linkcolor=accent,urlcolor=accent,
+ pdftitle={Cadastro de Currículos -- Implementação do desafio CIEE/PR},
+ pdfauthor={Angel Mario},
+ pdfsubject={Solução entregue, decisões técnicas, verificação e diagramas}}
+\setkomafont{section}{\sffamily\bfseries\Large\color{navy}}
+\setkomafont{subsection}{\sffamily\bfseries\large\color{navy}}
+\setkomafont{pageheadfoot}{\sffamily\small\color{muted}}
+\setkomafont{caption}{\small\color{muted}}
+\setkomafont{captionlabel}{\bfseries}
+\RedeclareSectionCommand[beforeskip=1.1\baselineskip,afterskip=0.4\baselineskip]{section}
+\RedeclareSectionCommand[beforeskip=0.8\baselineskip,afterskip=0.3\baselineskip]{subsection}
+\setcounter{tocdepth}{1}
+\setlist{itemsep=0.15em,topsep=0.3em,leftmargin=*}
+\renewcommand{\arraystretch}{1.35}
+\setlength{\extrarowheight}{2pt}
+\setlength{\heavyrulewidth}{0.5pt}
+\setlength{\lightrulewidth}{0.3pt}
+\setlength{\aboverulesep}{3pt}
+\setlength{\belowrulesep}{3pt}
+\setlength{\emergencystretch}{2em}
+\setlength{\parskip}{6pt plus 1pt}
+\setlength{\parfillskip}{0pt plus 1fil}
+\setlength{\tabcolsep}{9pt}
+\newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcommand{\cabecalhotabela}{\rowcolor{paperblue}}
+\let\tabularxoriginal\tabularx
+\renewcommand{\tabularx}{\small\arrayrulecolor{tableline}\tabularxoriginal}
+\let\longtableoriginal\longtable
+\renewcommand{\longtable}{\small\arrayrulecolor{tableline}\longtableoriginal}
+\newcommand{\destaque}[2]{%
+ \par\medskip\noindent\colorbox{paperblue}{%
+ \parbox{\dimexpr\linewidth-2\fboxsep\relax}{%
+ \vspace{3mm}\textcolor{navy}{\sffamily\bfseries #1}\par
+ \smallskip #2\vspace{3mm}}}\par\medskip}
+\newcommand{\telapagina}[4]{%
+ \clearpage\subsection{#1}
+ #2\par\medskip
+ \begin{figure}[H]\centering
+ \includegraphics[width=\linewidth,height=0.72\textheight,keepaspectratio]{imagens/#3}
+ \caption{#4}\end{figure}}
+\newcommand{\pranchadiagrama}[4]{%
+ \clearpage\begin{landscape}\thispagestyle{empty}
+ \pdfbookmark[1]{#1}{#4}
+ {\sffamily\bfseries\Large\color{navy}#1\par}
+ \smallskip{\small #3\par}\medskip
+ \begin{figure}[H]\centering
+ \includegraphics[width=\linewidth,height=108mm,keepaspectratio]{imagens/#2}
+ \caption{#1}\label{#4}\end{figure}
+ \vfill\noindent{\sffamily\small\color{muted}CIEE/PR\enspace /\enspace Modelagem da implementação\hfill\thepage}
+ \clearpage\end{landscape}}
+
+\clearpairofpagestyles
+\ihead{\textcolor{navy}{\textbf{CIEE/PR}}\enspace /\enspace Cadastro de currículos}
+\ohead{Implementação}
+\ifoot{Angel Mario\enspace\textbullet\enspace Outubro de 2026}
+\ofoot*{\pagemark}
+\KOMAoptions{headsepline=0.4pt}
+\pagestyle{scrheadings}
+
+\begin{document}
+\hypersetup{pageanchor=false}
+\begin{titlepage}\thispagestyle{empty}\sffamily
+    \noindent{\small\bfseries\color{accent} DESAFIO TÉCNICO\enspace /\enspace CIEE/PR}
+    \vspace{12mm}
+
+    \noindent{\Huge\bfseries\color{navy} Cadastro de\\[2mm] Currículos\par}
+    \vspace{5mm}
+    \noindent{\Large\color{accent} Implementação e decisões técnicas\par}
+    \vspace{6mm}
+    \noindent Uma aplicação para cadastrar, revisar e consultar candidatos,
+    com preenchimento manual ou assistido por PDF.
+    \vspace{9mm}
+
+    \noindent\includegraphics[width=\textwidth]{imagens/interface-listagem.png}
+    \vspace{5mm}
+    \noindent{\small\color{muted}Interface real da solução: busca, filtros, ordenação e paginação.}
+    \vfill
+
+    \noindent{\color{accent}\rule{\textwidth}{1pt}}
+    \vspace{4mm}
+    \noindent\begin{tabularx}{\textwidth}{Y r}
+        \textbf{Angel Mario Roque Suárez}                            & Curitiba -- PR       \\
+        Desenvolvedor Fullstack                                      & 3 de outubro de 2026 \\
+        React\enspace /\enspace Node.js\enspace /\enspace SQL Server & Versão 1.0.0
+    \end{tabularx}
+\end{titlepage}
+\hypersetup{pageanchor=true}
+\pagenumbering{roman}
+\pdfbookmark[0]{Sumário}{sumario}
+\tableofcontents
+\vspace{10mm}
+\destaque{Guia de leitura}{%
+    Para conhecer a entrega, comece pela visão geral e pelas telas da
+    Seção~\ref{sec:interface}. As decisões estão na Seção~\ref{sec:arquitetura};
+    os cenários e relatórios, na Seção~\ref{sec:qualidade}.
+    O roteiro de avaliação orienta a execução e o anexo reúne os 13 diagramas.}
+\clearpage\pagenumbering{arabic}
+\input{projeto}
+\appendix
+\clearpage
+\section{Diagramas da implementação}
+Os modelos foram preparados no Visual Paradigm e atualizados conforme o
+desenvolvimento. Este anexo reúne as 13 imagens exportadas do projeto nativo
+\texttt{visualp.vpp}. Cada prancha apresenta o propósito do diagrama e o fluxo
+correspondente.
+
+\begin{tabularx}{\textwidth}{P{1cm}Y P{3.1cm}}
+    \toprule\cabecalhotabela\textbf{ID} & \textbf{Diagrama}             & \textbf{Referência}               \\\midrule
+    D01                                 & Casos de uso                  & Figura~\ref{fig:casos}            \\
+    D02                                 & Componentes e integrações     & Figura~\ref{fig:componentes}      \\
+    D03                                 & Modelo de dados SQL Server    & Figura~\ref{fig:erd}              \\
+    D04                                 & Importação e revisão de PDF   & Figura~\ref{fig:importacao}       \\
+    D05                                 & Implantação local com Compose & Figura~\ref{fig:implantacao}      \\
+    D06                                 & Cadastro manual               & Figura~\ref{fig:cadastro-manual}  \\
+    D07                                 & Consulta filtrada e paginada  & Figura~\ref{fig:listagem}         \\
+    D08                                 & Consulta de detalhes          & Figura~\ref{fig:detalhes}         \\
+    D09                                 & Cadastro com arquivo opcional & Figura~\ref{fig:cadastro-arquivo} \\
+    D10                                 & Download do currículo         & Figura~\ref{fig:download}         \\
+    D11                                 & Exclusão individual           & Figura~\ref{fig:exclusao}         \\
+    D12                                 & Exclusão em lote pela API     & Figura~\ref{fig:exclusao-lote}    \\
+    D13                                 & Descarte de alterações        & Figura~\ref{fig:descarte}         \\\bottomrule
+\end{tabularx}
+
+\input{modelagem}
+\end{document}

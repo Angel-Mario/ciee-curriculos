@@ -10,6 +10,61 @@ export const CANDIDATE_SORT_FIELDS = [
   "interestArea",
 ] as const;
 
+export const interestAreas = [
+  "Administração",
+  "Análise de Dados",
+  "Arquitetura e Urbanismo",
+  "Assistente Administrativo",
+  "Atendimento ao Cliente",
+  "Auxiliar de Produção",
+  "Biomedicina",
+  "Ciências Contábeis",
+  "Comércio Exterior",
+  "Compras",
+  "Comunicação e Jornalismo",
+  "Departamento Pessoal",
+  "Desenvolvimento Backend",
+  "Desenvolvimento de Sistemas",
+  "Desenvolvimento Frontend",
+  "Desenvolvimento Full Stack",
+  "Design",
+  "Design de Interfaces (UI/UX)",
+  "Direito",
+  "Educação Física",
+  "Enfermagem",
+  "Engenharia Ambiental",
+  "Engenharia Civil",
+  "Engenharia de Produção",
+  "Engenharia Elétrica",
+  "Engenharia Mecânica",
+  "Farmácia",
+  "Finanças",
+  "Fisioterapia",
+  "Gastronomia",
+  "Gestão de Projetos",
+  "Gestão Pública",
+  "Logística",
+  "Marketing",
+  "Nutrição",
+  "Pedagogia",
+  "Psicologia",
+  "Qualidade",
+  "Recepção",
+  "Recursos Humanos",
+  "Redes e Infraestrutura",
+  "Secretariado",
+  "Segurança da Informação",
+  "Segurança do Trabalho",
+  "Serviço Social",
+  "Suporte Técnico",
+  "Técnico em Informática",
+  "Turismo e Hotelaria",
+  "Vendas",
+  "Veterinária",
+];
+
+const allowedInterestAreas = new Set(interestAreas);
+
 const MAX_CANDIDATE_ID = 2_147_483_647;
 const optionalText = (maximum: number, message: string) =>
   z
@@ -38,7 +93,9 @@ export const createCandidateSchema = z
     interestArea: optionalText(
       200,
       "A área ou cargo deve ter no máximo 200 caracteres."
-    ),
+    ).refine((value) => value === null || allowedInterestAreas.has(value), {
+      message: "Selecione uma área ou cargo da lista de opções.",
+    }),
     phone: brazilianPhoneSchema,
     professionalSummary: optionalText(
       2000,

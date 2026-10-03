@@ -1,8 +1,53 @@
+import { interestAreas } from "@ciee-curriculos/shared";
 import { describe, expect, it } from "vitest";
 
 import { CreateCandidateDto } from "./create-candidate.dto.js";
 
 describe("candidate creation input", () => {
+  it.each(interestAreas)(
+    "accepts the predefined interest area %s",
+    (interestArea) => {
+      expect(
+        CreateCandidateDto.schema.parse({
+          email: "ana@example.com",
+          fullName: "Ana Souza",
+          interestArea: ` ${interestArea} `,
+        }).interestArea
+      ).toBe(interestArea);
+    }
+  );
+
+  it.each([undefined, null, "", "   "])(
+    "keeps interest area optional: %s",
+    (interestArea) => {
+      expect(
+        CreateCandidateDto.schema.parse({
+          email: "ana@example.com",
+          fullName: "Ana Souza",
+          interestArea,
+        }).interestArea
+      ).toBeNull();
+    }
+  );
+
+  it.each(["Cargo inventado", "desenvolvimento backend", "Backend"])(
+    "rejects unlisted interest areas: %s",
+    (interestArea) => {
+      const result = CreateCandidateDto.schema.safeParse({
+        email: "ana@example.com",
+        fullName: "Ana Souza",
+        interestArea,
+      });
+      expect(result.success).toBeFalsy();
+      expect(result.error?.issues).toContainEqual(
+        expect.objectContaining({
+          message: "Selecione uma área ou cargo da lista de opções.",
+          path: ["interestArea"],
+        })
+      );
+    }
+  );
+
   it("normalizes email casing and international phone formatting", () => {
     const candidate = CreateCandidateDto.schema.parse({
       email: " ANA@Example.COM ",

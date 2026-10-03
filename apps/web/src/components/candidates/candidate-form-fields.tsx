@@ -1,4 +1,7 @@
-import { normalizeBrazilianPhone } from "@ciee-curriculos/shared";
+import {
+  interestAreas,
+  normalizeBrazilianPhone,
+} from "@ciee-curriculos/shared";
 import {
   Combobox,
   ComboboxContent,
@@ -24,7 +27,6 @@ import {
   FieldDescription,
 } from "@/components/ui/field";
 import type { CandidateFieldErrors } from "@/hooks/use-new-candidate-form";
-import { interestAreas } from "@/lib/candidates";
 import type { CandidateInput } from "@/lib/candidates";
 
 interface CandidateFormFieldsProps {

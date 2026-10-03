@@ -34,7 +34,8 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
     links: [
       {
         rel: "icon",
-        href: "/favicon.ico",
+        href: "/favicon.svg",
+        type: "image/svg+xml",
       },
     ],
   }),
@@ -87,7 +88,7 @@ function RootComponent() {
             </SidebarLink>
             <SidebarLink to="/candidates/new">
               <Plus aria-hidden="true" />
-              Novo cadastro
+              Novo candidato
             </SidebarLink>
           </nav>
         </aside>

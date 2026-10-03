@@ -6,6 +6,7 @@ export {
   createCandidateSchema,
   curriculumDownloadSchema,
   deleteCandidatesSchema,
+  interestAreas,
   listCandidatesQuerySchema,
   parseListCandidatesQuery,
   pdfImportResultSchema,

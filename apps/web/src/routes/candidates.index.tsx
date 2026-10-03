@@ -1,3 +1,4 @@
+import { interestAreas } from "@ciee-curriculos/shared";
 import type { ListCandidatesQuery } from "@ciee-curriculos/shared";
 import {
   Combobox,
@@ -87,11 +88,7 @@ import {
   parseCandidateListSearch,
 } from "@/lib/candidate-sort";
 import type { CandidateSortField } from "@/lib/candidate-sort";
-import {
-  getCurriculumDownloadUrl,
-  getInitials,
-  interestAreas,
-} from "@/lib/candidates";
+import { getCurriculumDownloadUrl, getInitials } from "@/lib/candidates";
 import type { Candidate } from "@/lib/candidates";
 import { formatBrazilianPhone } from "@/lib/phone";
 

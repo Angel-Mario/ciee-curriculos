@@ -1,0 +1,15 @@
+# Auxiliares LaTeX; manter main.pdf como artefato da documentação.
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# Arquivos temporários do Visual Paradigm.
+*.vpp.bak
+*.vpp.lck
+*.vpp~

@@ -1,0 +1,96 @@
+{
+  "project": "visualp.vpp",
+  "diagrams": [
+    {
+      "name": "D01 - Casos de uso",
+      "id": "fAezPwWGAqACBgZq",
+      "vpp_url": "visualp.vpp://diagram/fAezPwWGAqACBgZq",
+      "file": "imagens/use-case-diagram.png",
+      "elements": 22
+    },
+    {
+      "name": "D02 - Componentes",
+      "id": "79ezPwWGAqACBghp",
+      "vpp_url": "visualp.vpp://diagram/79ezPwWGAqACBghp",
+      "file": "imagens/component-diagram.png",
+      "elements": 19
+    },
+    {
+      "name": "D03 - Dados SQL Server",
+      "id": "hY.zPwWGAqACBgin",
+      "vpp_url": "visualp.vpp://diagram/hY.zPwWGAqACBgin",
+      "file": "imagens/database-erd.png",
+      "elements": 5
+    },
+    {
+      "name": "D04 - Importação e revisão de PDF",
+      "id": "r8.zPwWGAqACBgi_",
+      "vpp_url": "visualp.vpp://diagram/r8.zPwWGAqACBgi_",
+      "file": "imagens/pdf-import-sequence.png",
+      "elements": 17
+    },
+    {
+      "name": "D05 - Implantação local com Compose",
+      "id": "6v2rPwWGAqACBglx",
+      "vpp_url": "visualp.vpp://diagram/6v2rPwWGAqACBglx",
+      "file": "imagens/deployment-diagram.png",
+      "elements": 16
+    },
+    {
+      "name": "D06 - Cadastro manual",
+      "id": "tflovwWGAqACBg0K",
+      "vpp_url": "visualp.vpp://diagram/tflovwWGAqACBg0K",
+      "file": "imagens/manual-registration-sequence.png",
+      "elements": 25
+    },
+    {
+      "name": "D07 - Consulta filtrada e paginada",
+      "id": "b2VovwWGAqACBg24",
+      "vpp_url": "visualp.vpp://diagram/b2VovwWGAqACBg24",
+      "file": "imagens/candidate-list-sequence.png",
+      "elements": 20
+    },
+    {
+      "name": "D08 - Consulta de detalhes",
+      "id": "nnVovwWGAqACBg5m",
+      "vpp_url": "visualp.vpp://diagram/nnVovwWGAqACBg5m",
+      "file": "imagens/candidate-details-sequence.png",
+      "elements": 20
+    },
+    {
+      "name": "D09 - Cadastro com arquivo opcional",
+      "id": "4d6oQIWGAqACBg7a",
+      "vpp_url": "visualp.vpp://diagram/4d6oQIWGAqACBg7a",
+      "file": "imagens/candidate-save-sequence.png",
+      "elements": 50
+    },
+    {
+      "name": "D10 - Download do currículo",
+      "id": "x36oQIWGAqACBg9h",
+      "vpp_url": "visualp.vpp://diagram/x36oQIWGAqACBg9h",
+      "file": "imagens/curriculum-download-sequence.png",
+      "elements": 17
+    },
+    {
+      "name": "D11 - Exclusão individual",
+      "id": "VwGoQIWGAqACBg.1",
+      "vpp_url": "visualp.vpp://diagram/VwGoQIWGAqACBg.1",
+      "file": "imagens/candidate-delete-sequence.png",
+      "elements": 20
+    },
+    {
+      "name": "D12 - Exclusão em lote pela API",
+      "id": "PiGoQIWGAqACBhAX",
+      "vpp_url": "visualp.vpp://diagram/PiGoQIWGAqACBhAX",
+      "file": "imagens/candidate-bulk-delete-sequence.png",
+      "elements": 20
+    },
+    {
+      "name": "D13 - Descarte de alterações do formulário",
+      "id": "GOGoQIWGAqACBhB5",
+      "vpp_url": "visualp.vpp://diagram/GOGoQIWGAqACBhB5",
+      "file": "imagens/discard-changes-sequence.png",
+      "elements": 15
+    }
+  ]
+}

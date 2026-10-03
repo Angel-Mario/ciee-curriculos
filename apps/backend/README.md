@@ -121,6 +121,8 @@ Quando um PDF é enviado junto com a criação, o backend envia o objeto ao Rust
 
 Os contratos Zod em `packages/shared` validam o formulário, o cliente HTTP e o backend. O pipe global valida os DTOs; o controller de candidatos também valida explicitamente JSON, multipart e parâmetros de listagem. Campos desconhecidos são rejeitados. Consulte <http://localhost:3000/docs> para a referência interativa e <http://localhost:3000/openapi.json> para o contrato JSON, incluindo respostas de candidatos, paginação, importação e exclusão.
 
+A área ou cargo de interesse é opcional e aceita apenas os valores predefinidos em `interestAreas`, no pacote `packages/shared`. Espaços externos são removidos; valores fora da lista retornam 400 tanto em JSON quanto em multipart. O formulário utiliza a mesma lista e validação.
+
 O e-mail é normalizado para letras minúsculas e precisa ser único por candidato. Tentativas de cadastro com e-mail já utilizado retornam `409` com código `EMAIL_ALREADY_IN_USE`; a restrição de unicidade também é aplicada no SQL Server. A migration recusa emails duplicados já existentes sem remover registros.
 
 O telefone aceita apenas números brasileiros com DDD válido: fixo com 10 dígitos (assinante iniciado em 2–5) ou celular com 11 dígitos (assinante iniciado em 9). Tanto na importação quanto no cadastro, `+55 (41) 99742-9889` vira `41997429889`. O frontend mostra +55 como prefixo fixo e envia os dígitos nacionais. Outros países, DDDs inexistentes e comprimentos inválidos são rejeitados; telefone vazio é armazenado como `null`.

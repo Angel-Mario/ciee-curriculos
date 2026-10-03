@@ -1,14 +1,83 @@
 # CIEE Currículos
 
-Monorepo da aplicação web e da API. O frontend usa React, Vite e TanStack Router; a API usa NestJS e Prisma com SQL Server.
+**Versão do projeto: 1.0.0.**
+
+Aplicação desenvolvida para o desafio técnico do CIEE/PR: cadastro manual ou assistido por currículo PDF, revisão dos dados, listagem e consulta de detalhes. A solução integra React, uma API Node.js com NestJS e persistência no SQL Server.
+
+**[Leia a documentação técnica em PDF](docs/documentacao-tecnica/main.pdf)** — solução entregue, telas reais, decisões técnicas, verificações e 13 diagramas da implementação. Os [fontes LaTeX e o projeto Visual Paradigm](docs/documentacao-tecnica/README.md) também estão disponíveis para consulta.
+
+## A aplicação em uso
+
+![Listagem real de candidatos com busca, filtros, ordenação e paginação](docs/images/candidatos-listagem.webp)
+
+| Cadastro e revisão do PDF | Detalhes e acesso ao currículo |
+| --- | --- |
+| [![Formulário real com sugestões extraídas do PDF e opção de armazenar o arquivo](docs/images/cadastro-importacao-pdf.webp)](docs/images/cadastro-importacao-pdf.webp) | [![Tela real de detalhes com dados do candidato, resumo profissional e download do PDF](docs/images/candidato-detalhes.webp)](docs/images/candidato-detalhes.webp) |
+
+As capturas mostram a aplicação em execução. Clique nas imagens para abrir em tamanho completo.
+
+<details>
+<summary>Ver layout em cartões e estado sem resultados</summary>
+
+| Layout adaptável em cartões | Filtro sem resultados |
+| --- | --- |
+| [![Candidatos apresentados em cartões quando há menos espaço horizontal](docs/images/candidatos-cartoes.webp)](docs/images/candidatos-cartoes.webp) | [![Mensagem sem candidatos encontrados e ação para limpar a busca](docs/images/candidatos-filtro-sem-resultados.webp)](docs/images/candidatos-filtro-sem-resultados.webp) |
+
+</details>
+
+## O que foi entregue
+
+- **Dois caminhos, um formulário:** cadastro manual ou sugestões de nome, e-mail e telefone extraídas do PDF pelo backend, com revisão antes de salvar.
+- **PDF opcional:** falhas de leitura permitem continuar manualmente; guardar o arquivo é uma escolha explícita.
+- **Consulta de candidatos:** listagem e detalhes, com busca, filtros, ordenação, paginação e layout adaptável.
+- **Dados consistentes:** validações compartilhadas entre frontend e backend, e-mail único e normalizado, telefone brasileiro com DDD e área ou cargo restrito às opções predefinidas.
+- **Gestão do currículo:** armazenamento opcional em RustFS/S3, download e exclusão individual com confirmação.
+- **Avaliação reproduzível:** Docker Compose, migrations SQL Server, currículo fictício, testes e documentação interativa da API.
+
+O [relato de desenvolvimento](DESENVOLVIMENTO.md) explica as decisões, a participação da IA e o tempo dedicado. O [registro de qualidade](QUALIDADE.md) relaciona os cenários verificados e os relatórios de cobertura.
 
 ## Requisitos
 
 - Node.js 22 ou superior
 - pnpm 11
-- Docker Desktop, caso queira usar o SQL Server pelo Docker Compose
+- Docker Desktop para executar a stack local com Docker Compose
 
 ## Início rápido
+
+Para avaliar a aplicação completa, crie o arquivo de configuração na raiz do repositório:
+
+```bash
+cp apps/backend/.env.example apps/backend/.env
+```
+
+No PowerShell, use `Copy-Item apps/backend/.env.example apps/backend/.env`. Configure `SQLSERVER_PASSWORD` e inicie a stack:
+
+```bash
+pnpm docker:up
+```
+
+Ou execute diretamente, sem depender dos scripts pnpm:
+
+```bash
+docker compose --env-file apps/backend/.env up -d --build
+```
+
+O Compose prepara o banco, aplica as migrations e inicializa o bucket de currículos antes de disponibilizar a API.
+
+| Serviço                 | Endereço local               |
+| ----------------------- | ---------------------------- |
+| Aplicação               | <http://localhost:3001>      |
+| API                     | <http://localhost:3000/api>  |
+| Documentação interativa | <http://localhost:3000/docs> |
+| Console RustFS          | <http://localhost:9001>      |
+
+### Experimentar o fluxo principal
+
+1. Abra **Novo candidato** e preencha os campos manualmente ou selecione [curriculo-ficticio.pdf](examples/curriculo-ficticio.pdf).
+2. Confira as sugestões e complete os dados. Se desejar guardar o arquivo, marque a opção correspondente.
+3. Salve e consulte os detalhes. Volte à listagem para experimentar busca, filtros e ordenação.
+
+## Desenvolvimento local
 
 Instale as dependências na raiz do repositório:
 
@@ -35,6 +104,14 @@ pnpm db:start
 pnpm prisma:generate
 pnpm prisma:migrate:deploy
 ```
+
+Para exercitar o armazenamento opcional, inicie também os serviços de arquivos:
+
+```bash
+docker compose --env-file apps/backend/.env up -d rustfs rustfs_init
+```
+
+Crie `apps/web/.env.local` com `VITE_SERVER_URL=http://localhost:3000`.
 
 `pnpm db:start` inicia o serviço `sqlserver` definido no Docker Compose; a verificação de saúde cria `backend_db` se o banco ainda não existir. Se você usar outra instância do SQL Server, configure a conexão em `apps/backend/.env` e confirme que o banco de dados já existe.
 
@@ -160,4 +237,4 @@ pnpm --filter backend test:e2e
 pnpm --filter backend test:e2e --coverage
 ```
 
-`pnpm test` executa os testes unitários dos pacotes. Os e2e são separados e precisam de SQL Server e RustFS disponíveis. A cobertura inclui arquivos sem testes: backend em `apps/backend/coverage`, integração em `apps/backend/coverage-e2e` e frontend em `apps/web/coverage`. Cada relatório tem HTML, resumo JSON e LCOV. Não some percentuais de suítes diferentes. O frontend possui testes de API, cache e hooks, mas ainda não tem testes automatizados de componentes. Consulte [apps/backend/README.md](apps/backend/README.md) para preparar o banco dedicado de testes e [QUALIDADE.md](QUALIDADE.md) para os resultados e limites da revisão.
+`pnpm test` executa os testes unitários dos pacotes. Os e2e da API precisam de SQL Server e RustFS disponíveis e usam um banco dedicado. Os relatórios de cobertura ficam em `apps/backend/coverage`, `apps/backend/coverage-e2e` e `apps/web/coverage`, com HTML, resumo JSON e LCOV. Cada suíte possui uma medição independente. Consulte o [README do backend](apps/backend/README.md#testes) para preparar o ambiente e [QUALIDADE.md](QUALIDADE.md) para conhecer os cenários e resultados registrados.

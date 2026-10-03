@@ -72,7 +72,7 @@ describe("Candidates API (e2e)", () => {
     const payload = {
       email: `${crypto.randomUUID()}@example.com`,
       fullName: "Ana Souza",
-      interestArea: "Backend",
+      interestArea: "Desenvolvimento Backend",
       phone: "41999991234",
       professionalSummary: "Experiência com Node.js.",
     };
@@ -96,6 +96,27 @@ describe("Candidates API (e2e)", () => {
       .get(`/api/candidates/${id}`)
       .expect(200);
     expect(details.body).toMatchObject({ id, ...payload });
+  });
+
+  it("rejects unlisted interest areas in JSON and multipart requests", async () => {
+    const payload = {
+      email: `${crypto.randomUUID()}@example.com`,
+      fullName: "Invalid interest area",
+      interestArea: "Cargo inventado",
+    };
+    const json = await request(app.getHttpServer())
+      .post("/api/candidates")
+      .send(payload)
+      .expect(400);
+    const multipart = await request(app.getHttpServer())
+      .post("/api/candidates")
+      .field(payload)
+      .expect(400);
+    for (const response of [json, multipart]) {
+      expect(JSON.stringify(response.body)).toContain(
+        "Selecione uma área ou cargo da lista de opções."
+      );
+    }
   });
 
   it("searches by name OR email and sorts by an allowed column", async () => {

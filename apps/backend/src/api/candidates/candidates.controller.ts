@@ -1,3 +1,4 @@
+import { interestAreas } from "@ciee-curriculos/shared";
 import {
   BadRequestException,
   HttpCode,
@@ -96,7 +97,7 @@ export class CandidatesController {
                 type: "string",
               },
               fullName: { maxLength: 200, minLength: 1, type: "string" },
-              interestArea: { maxLength: 200, type: "string" },
+              interestArea: { enum: interestAreas, type: "string" },
               phone: {
                 description: BRAZILIAN_PHONE_DESCRIPTION,
                 example: "41997429889",
@@ -114,7 +115,11 @@ export class CandidatesController {
             properties: {
               email: { format: "email", maxLength: 254, type: "string" },
               fullName: { maxLength: 200, minLength: 1, type: "string" },
-              interestArea: { maxLength: 200, nullable: true, type: "string" },
+              interestArea: {
+                enum: interestAreas,
+                nullable: true,
+                type: "string",
+              },
               phone: {
                 description: BRAZILIAN_PHONE_DESCRIPTION,
                 example: "41997429889",
