@@ -26,6 +26,29 @@ const input = {
 };
 
 describe("candidate query cache mutations", () => {
+  it("isolates cached lists by query state", () => {
+    const firstKey = candidateKeys.list({
+      hasCurriculum: "all",
+      interestArea: undefined,
+      page: 1,
+      pageSize: 10,
+      q: "ana",
+      sortBy: "fullName",
+      sortOrder: "asc",
+    });
+    const secondKey = candidateKeys.list({
+      hasCurriculum: "all",
+      interestArea: undefined,
+      page: 2,
+      pageSize: 10,
+      q: "ana",
+      sortBy: "fullName",
+      sortOrder: "asc",
+    });
+
+    expect(firstKey).not.toStrictEqual(secondKey);
+  });
+
   it("invalidates list queries and seeds the newly created detail", async () => {
     const queryClient = new QueryClient();
     const listKey = candidateKeys.list({

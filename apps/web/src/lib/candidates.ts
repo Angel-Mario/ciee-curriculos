@@ -5,7 +5,10 @@ import type {
   ListCandidatesQuery,
   CandidatePage,
 } from "@ciee-curriculos/shared";
-import { candidatePageSchema } from "@ciee-curriculos/shared";
+import {
+  candidatePageSchema,
+  curriculumDownloadSchema,
+} from "@ciee-curriculos/shared";
 
 import { env } from "@/env";
 import { compareCandidates } from "@/lib/candidate-sort";
@@ -383,9 +386,14 @@ export async function getCurriculumDownloadUrl(id: number): Promise<string> {
       404
     );
   }
-  const result = await request<{ url: string }>(
+  const rawResult = await request<unknown>(
     `candidates/${id}/curriculum/download`
   );
+  const result = curriculumDownloadSchema.parse(rawResult);
+  const url = new URL(result.url);
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new ApiError("A URL de download recebida é inválida.", 502);
+  }
   return result.url;
 }
 

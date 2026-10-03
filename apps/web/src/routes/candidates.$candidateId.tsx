@@ -11,6 +11,7 @@ import {
   Mail,
   Phone,
 } from "lucide-react";
+import { useEffect } from "react";
 
 import { CandidateDetailSkeleton } from "@/components/candidate-loading";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -47,15 +48,18 @@ function CandidateDetailPage() {
   const candidate = candidateQuery.data;
   const loading = candidateQuery.isPending;
   const error = candidateQuery.error?.message ?? null;
+  useEffect(() => {
+    if (candidateQuery.error) {
+      toast.add({
+        type: "error",
+        title:
+          candidateQuery.error.message ||
+          "Não foi possível carregar este candidato.",
+      });
+    }
+  }, [candidateQuery.error]);
   const downloadMutation = useMutation({
-    mutationFn: async () => {
-      const rawUrl = await getCurriculumDownloadUrl(parsedId);
-      const url = getDownloadUrl(rawUrl);
-      if (!url) {
-        throw new Error("A URL de download recebida é inválida.");
-      }
-      return url;
-    },
+    mutationFn: () => getCurriculumDownloadUrl(parsedId),
   });
   const downloading = downloadMutation.isPending;
 
@@ -120,17 +124,19 @@ function CandidateDetailPage() {
     }
     downloadTab.opener = null;
     try {
-      const url = await downloadMutation.mutateAsync();
-      downloadTab.location.href = url;
-    } catch (downloadError: unknown) {
-      downloadTab.close();
-      toast.add({
-        type: "error",
-        title:
-          downloadError instanceof Error
-            ? downloadError.message
-            : "Não foi possível baixar o currículo.",
+      const url = await toast.promise(downloadMutation.mutateAsync(), {
+        error: (downloadError) => ({
+          title:
+            downloadError instanceof Error
+              ? downloadError.message
+              : "Não foi possível baixar o currículo.",
+        }),
+        loading: { title: "Preparando o download do currículo…" },
+        success: { title: "O currículo está pronto para baixar." },
       });
+      downloadTab.location.href = url;
+    } catch {
+      downloadTab.close();
     }
   };
 
@@ -267,18 +273,4 @@ function CandidateDetailPage() {
       </section>
     </>
   );
-}
-
-function getDownloadUrl(value: string | undefined): string | null {
-  if (!value || value.startsWith("#")) {
-    return null;
-  }
-  try {
-    const url = new URL(value, window.location.origin);
-    return url.protocol === "http:" || url.protocol === "https:"
-      ? url.href
-      : null;
-  } catch {
-    return null;
-  }
 }

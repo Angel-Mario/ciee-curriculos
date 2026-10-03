@@ -73,6 +73,7 @@ import { deleteCandidateMutationOptions } from "@/lib/candidate-mutations";
 import { candidateListOptions } from "@/lib/candidate-queries";
 import { candidateColumns, isCandidateSortField } from "@/lib/candidate-sort";
 import type { CandidateSortField } from "@/lib/candidate-sort";
+import { getCurriculumDownloadUrl } from "@/lib/candidates";
 import type { Candidate } from "@/lib/candidates";
 
 export const Route = createFileRoute("/candidates/")({
@@ -95,6 +96,9 @@ function CandidateListPage() {
   const deleteMutation = useMutation(
     deleteCandidateMutationOptions(queryClient)
   );
+  const downloadMutation = useMutation({
+    mutationFn: getCurriculumDownloadUrl,
+  });
   const candidates = candidateQuery.data?.items ?? EMPTY_CANDIDATES;
   const visibleCandidates = candidates;
   const loading = candidateQuery.isPending;
@@ -105,8 +109,18 @@ function CandidateListPage() {
     null
   );
   const deleting = deleteMutation.isPending;
+  const downloading = downloadMutation.isPending;
   const searchRef = useRef<HTMLInputElement>(null);
   const deleteTriggerRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    if (candidateQuery.error) {
+      toast.add({
+        type: "error",
+        title: getRequestErrorTitle(candidateQuery.error).title,
+      });
+    }
+  }, [candidateQuery.error]);
 
   useEffect(() => {
     const nextQuery = searchDraft.trim() || undefined;
@@ -183,7 +197,11 @@ function CandidateListPage() {
       return;
     }
     try {
-      await deleteMutation.mutateAsync(candidateToDelete);
+      await toast.promise(deleteMutation.mutateAsync(candidateToDelete), {
+        error: getRequestErrorTitle,
+        loading: { title: "Excluindo o candidato…" },
+        success: { title: "Candidato removido com sucesso." },
+      });
       const nextPageCount = Math.max(
         1,
         Math.ceil((total - 1) / search.pageSize)
@@ -195,16 +213,33 @@ function CandidateListPage() {
           page: Math.min(previous.page, nextPageCount),
         }),
       });
-      toast.add({ type: "success", title: "Candidato removido com sucesso." });
       closeDelete();
-    } catch (error) {
+    } catch {
+      // The promise toast already reports the failed deletion.
+    }
+  };
+  const handleDownload = async (candidate: Candidate) => {
+    const downloadTab = window.open("about:blank", "_blank");
+    if (!downloadTab) {
       toast.add({
         type: "error",
-        title:
-          error instanceof Error
-            ? error.message
-            : "Não foi possível remover o candidato. Tente novamente.",
+        title: "Permita a abertura de uma nova aba para baixar o currículo.",
       });
+      return;
+    }
+    downloadTab.opener = null;
+    try {
+      const url = await toast.promise(
+        downloadMutation.mutateAsync(candidate.id),
+        {
+          error: getRequestErrorTitle,
+          loading: { title: "Preparando o download do currículo…" },
+          success: { title: "O currículo está pronto para baixar." },
+        }
+      );
+      downloadTab.location.href = url;
+    } catch {
+      downloadTab.close();
     }
   };
   const openDelete = (id: number, trigger: HTMLButtonElement) => {
@@ -449,6 +484,8 @@ function CandidateListPage() {
                         <CandidateActions
                           candidate={candidate}
                           onDelete={openDelete}
+                          onDownload={handleDownload}
+                          downloading={downloading}
                           search={search}
                         />
                       </TableCell>
@@ -482,6 +519,8 @@ function CandidateListPage() {
                   <CandidateActions
                     candidate={candidate}
                     onDelete={openDelete}
+                    onDownload={handleDownload}
+                    downloading={downloading}
                     search={search}
                   />
                 </article>
@@ -638,10 +677,14 @@ function PageHeading({ usingMockData }: { usingMockData: boolean }) {
 function CandidateActions({
   candidate,
   onDelete,
+  onDownload,
+  downloading,
   search,
 }: {
   candidate: Candidate;
   onDelete: (id: number, trigger: HTMLButtonElement) => void;
+  onDownload: (candidate: Candidate) => void;
+  downloading: boolean;
   search: ListCandidatesQuery;
 }) {
   return (
@@ -668,13 +711,16 @@ function CandidateActions({
       {candidate.hasCurriculum && (
         <Tooltip>
           <TooltipTrigger
-            aria-label={`Baixar currículo de ${candidate.fullName} (em breve)`}
-            aria-disabled="true"
+            aria-label={`Baixar currículo de ${candidate.fullName}`}
+            disabled={downloading}
             render={<Button size="icon-sm" variant="outline" />}
+            onClick={() => onDownload(candidate)}
           >
             <FileDown aria-hidden="true" />
           </TooltipTrigger>
-          <TooltipContent>Baixar currículo — em breve</TooltipContent>
+          <TooltipContent>
+            {downloading ? "Preparando download…" : "Baixar currículo"}
+          </TooltipContent>
         </Tooltip>
       )}
       <Tooltip>
@@ -689,6 +735,15 @@ function CandidateActions({
       </Tooltip>
     </div>
   );
+}
+
+function getRequestErrorTitle(error: unknown): { title: string } {
+  return {
+    title:
+      error instanceof Error
+        ? error.message
+        : "A solicitação falhou. Tente novamente.",
+  };
 }
 
 function SortableHeader({

@@ -157,21 +157,24 @@ function NewCandidatePage() {
         phone: result.data.phone ?? current.phone,
       }));
       setFieldErrors({});
-      if (result.warnings.length > 0) {
-        toast.add({
-          type: "warning",
-          title: "Revise os dados sugeridos antes de salvar.",
-        });
-      } else {
-        toast.add({
-          type: "success",
-          title: "Dados do currículo preenchidos para revisão.",
-        });
-      }
+      toast.add({
+        type: result.warnings.length > 0 ? "warning" : "success",
+        title:
+          result.warnings.length > 0
+            ? "Revise os dados sugeridos antes de salvar."
+            : "Dados do currículo preenchidos para revisão.",
+      });
     } catch (error) {
       if (controller.signal.aborted) {
         return;
       }
+      toast.add({
+        type: "error",
+        title:
+          error instanceof Error
+            ? error.message
+            : "Não foi possível importar este currículo.",
+      });
       setFormError(
         error instanceof Error
           ? error.message
@@ -215,18 +218,26 @@ function NewCandidatePage() {
       return;
     }
     try {
-      const candidate = await createMutation.mutateAsync({
-        input: {
-          ...form,
-          fullName: form.fullName.trim(),
-          email: form.email.trim(),
-        },
-        file: storeCurriculum ? file : undefined,
-      });
-      toast.add({
-        type: "success",
-        title: "Candidato cadastrado com sucesso.",
-      });
+      const candidate = await toast.promise(
+        createMutation.mutateAsync({
+          input: {
+            ...form,
+            fullName: form.fullName.trim(),
+            email: form.email.trim(),
+          },
+          file: storeCurriculum ? file : undefined,
+        }),
+        {
+          error: (error) => ({
+            title:
+              error instanceof Error
+                ? error.message
+                : "Não foi possível salvar o candidato.",
+          }),
+          loading: { title: "Salvando o candidato…" },
+          success: { title: "Candidato cadastrado com sucesso." },
+        }
+      );
       savedRef.current = true;
       await navigate({
         params: { candidateId: String(candidate.id) },
