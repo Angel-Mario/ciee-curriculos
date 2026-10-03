@@ -21,10 +21,25 @@ model Todo {
 model Candidate {
   id                  Int     @id @default(autoincrement()) @db.Int
   fullName            String  @map("full_name") @db.NVarChar(200)
-  email               String  @db.NVarChar(254)
+  email               String  @unique(map: "UQ_candidates_email") @db.NVarChar(254)
   phone               String? @db.NVarChar(32)
   interestArea        String? @map("interest_area") @db.NVarChar(200)
   professionalSummary String? @map("professional_summary") @db.NVarChar(2000)
+  curriculumFile      CurriculumFile?
 
   @@map("candidates")
+}
+
+model CurriculumFile {
+  id           Int      @id @default(autoincrement()) @db.Int
+  candidateId  Int      @unique @map("candidate_id") @db.Int
+  storageKey   String   @map("storage_key") @db.NVarChar(500)
+  originalName String   @map("original_name") @db.NVarChar(260)
+  mimeType     String   @map("mime_type") @db.NVarChar(100)
+  sizeBytes    Int      @map("size_bytes") @db.Int
+  uploadedAt   DateTime @default(now()) @map("uploaded_at") @db.DateTime2
+
+  candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@map("curriculum_files")
 }

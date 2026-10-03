@@ -96,6 +96,51 @@ describe("Candidates API (e2e)", () => {
     expect(details.body).toMatchObject({ id, ...payload });
   });
 
+  it("searches by name OR email and sorts by an allowed column", async () => {
+    const emailMatch = await request(app.getHttpServer())
+      .post("/api/candidates")
+      .send({
+        email: `${crypto.randomUUID()}@example.com`,
+        fullName: "Candidate one",
+      })
+      .expect(201);
+    const emailMatchId = emailMatch.body.id as number;
+    createdIds.push(emailMatchId);
+    const nameMatch = await request(app.getHttpServer())
+      .post("/api/candidates")
+      .send({
+        email: `${crypto.randomUUID()}@example.com`,
+        fullName: "Ana Silva",
+      })
+      .expect(201);
+    const nameMatchId = nameMatch.body.id as number;
+    createdIds.push(nameMatchId);
+
+    const email = `${crypto.randomUUID()}@example.com`;
+    const emailOnlyMatch = await request(app.getHttpServer())
+      .post("/api/candidates")
+      .send({ email, fullName: "Unrelated name" })
+      .expect(201);
+    const emailOnlyMatchId = emailOnlyMatch.body.id as number;
+    createdIds.push(emailOnlyMatchId);
+
+    const byName = await request(app.getHttpServer())
+      .get("/api/candidates")
+      .query({ q: "Ana", sortBy: "fullName", sortOrder: "asc" })
+      .expect(200);
+    expect(
+      byName.body.map((candidate: { id: number }) => candidate.id)
+    ).toContain(nameMatchId);
+
+    const byEmail = await request(app.getHttpServer())
+      .get("/api/candidates")
+      .query({ q: email })
+      .expect(200);
+    expect(byEmail.body).toEqual([
+      expect.objectContaining({ email, id: emailOnlyMatchId }),
+    ]);
+  });
+
   it("rejects invalid data and invalid IDs", async () => {
     await request(app.getHttpServer())
       .post("/api/candidates")
@@ -104,6 +149,96 @@ describe("Candidates API (e2e)", () => {
     await request(app.getHttpServer()).get("/api/candidates/0").expect(400);
     await request(app.getHttpServer())
       .get("/api/candidates/not-an-id")
+      .expect(400);
+  });
+
+  it("normalizes contact fields and rejects emails already registered", async () => {
+    const email = `${crypto.randomUUID()}@example.com`;
+    const created = await request(app.getHttpServer())
+      .post("/api/candidates")
+      .send({
+        email: email.toUpperCase(),
+        fullName: "Contact normalization",
+        phone: "+55 (41) 99742-9889",
+      })
+      .expect(201);
+    const id = created.body.id as number;
+    createdIds.push(id);
+    expect(created.body).toMatchObject({ email, phone: "+5541997429889" });
+    const duplicate = await request(app.getHttpServer())
+      .post("/api/candidates")
+      .send({ email: ` ${email} `, fullName: "Duplicate email" })
+      .expect(409);
+    expect(duplicate.body.code).toBe("EMAIL_ALREADY_IN_USE");
+    const details = await request(app.getHttpServer())
+      .get(`/api/candidates/${id}`)
+      .expect(200);
+    expect(details.body).toMatchObject({ email, phone: "+5541997429889" });
+  });
+
+  it("returns the curriculum URL only when a download is requested", async () => {
+    const response = await request(app.getHttpServer())
+      .post("/api/candidates")
+      .field("email", `${crypto.randomUUID()}@example.com`)
+      .field("fullName", "Curriculum upload")
+      .attach("file", makeTextPdf(), {
+        contentType: "application/pdf",
+        filename: "resume.pdf",
+      })
+      .expect(201);
+    const id = response.body.id as number;
+    createdIds.push(id);
+
+    expect(response.body.curriculum).toMatchObject({
+      originalName: "resume.pdf",
+      sizeBytes: makeTextPdf().length,
+    });
+    expect(response.body.curriculum).not.toHaveProperty("url");
+    expect(response.body).not.toHaveProperty("curriculumFile");
+    const details = await request(app.getHttpServer())
+      .get(`/api/candidates/${id}`)
+      .expect(200);
+    expect(details.body.curriculum).not.toHaveProperty("url");
+
+    const download = await request(app.getHttpServer())
+      .get(`/api/candidates/${id}/curriculum/download`)
+      .expect(200);
+    expect(download.body.url).toMatch(
+      /^http:\/\/localhost:9000\/curricula\/[0-9a-f-]+\.pdf$/u
+    );
+
+    const listed = await request(app.getHttpServer())
+      .get("/api/candidates")
+      .expect(200);
+    expect(listed.body).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ hasCurriculum: true, id }),
+      ])
+    );
+
+    const deleted = await request(app.getHttpServer())
+      .delete(`/api/candidates/${id}`)
+      .expect(200);
+    expect(deleted.body).toEqual({ id });
+    createdIds.splice(createdIds.indexOf(id), 1);
+
+    const objectResponse = await fetch(download.body.url as string);
+    expect(objectResponse.status).toBe(404);
+    await request(app.getHttpServer())
+      .get(`/api/candidates/${id}/curriculum/download`)
+      .expect(404);
+  });
+
+  it("rejects download requests for missing curricula and invalid IDs", async () => {
+    const candidate = await createCandidate("Without curriculum");
+    await request(app.getHttpServer())
+      .get(`/api/candidates/${candidate.id}/curriculum/download`)
+      .expect(404);
+    await request(app.getHttpServer())
+      .get("/api/candidates/0/curriculum/download")
+      .expect(400);
+    await request(app.getHttpServer())
+      .get("/api/candidates/not-an-id/curriculum/download")
       .expect(400);
   });
 

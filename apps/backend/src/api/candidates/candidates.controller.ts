@@ -10,6 +10,8 @@ import {
   ParseIntPipe,
   Post,
   Body,
+  Request,
+  Query,
   UploadedFile,
   UseInterceptors,
   PayloadTooLargeException,
@@ -18,7 +20,10 @@ import {
 import { FileInterceptor } from "@nestjs/platform-express";
 import {
   ApiBadRequestResponse,
+  ApiBody,
+  ApiConsumes,
   ApiCreatedResponse,
+  ApiConflictResponse,
   ApiInternalServerErrorResponse,
   ApiOkResponse,
   ApiNotFoundResponse,
@@ -27,13 +32,18 @@ import {
   ApiTags,
   ApiUnprocessableEntityResponse,
   ApiUnsupportedMediaTypeResponse,
+  ApiQuery,
+  ApiServiceUnavailableResponse,
 } from "@nestjs/swagger";
+import type { Request as ExpressRequest } from "express";
 
 import { CandidatesService } from "./candidates.service.js";
+import type { CandidatePdf } from "./candidates.service.js";
 import { CreateCandidateDto } from "./dto/create-candidate.dto.js";
 import type { CreateCandidateInput } from "./dto/create-candidate.dto.js";
 import { DeleteCandidatesDto } from "./dto/delete-candidates.dto.js";
 import type { DeleteCandidatesInput } from "./dto/delete-candidates.dto.js";
+import { ListCandidatesQueryDto } from "./dto/list-candidates-query.dto.js";
 import { PdfImportService } from "./pdf/pdf-import.service.js";
 
 const MAX_PDF_SIZE_BYTES = 5_000_000;
@@ -41,6 +51,7 @@ const MAX_SQL_SERVER_INT = 2_147_483_647;
 
 interface UploadedPdf {
   buffer: Buffer;
+  originalname: string;
   size: number;
 }
 
@@ -53,26 +64,136 @@ export class CandidatesController {
   ) {}
 
   @Post()
-  @ApiOperation({ summary: "/api/candidates" })
+  @UseInterceptors(
+    FileInterceptor("file", {
+      limits: { fields: 5, fileSize: MAX_PDF_SIZE_BYTES, files: 1, parts: 6 },
+    })
+  )
+  @ApiOperation({
+    description:
+      "Create a candidate. Use multipart/form-data to attach an optional PDF (maximum 5 MB), or application/json to submit fields without a file.",
+    requestBody: {
+      // Scalar selects the first media type; show the PDF picker by default.
+      // eslint-disable-next-line sort-keys
+      content: {
+        "multipart/form-data": {
+          schema: {
+            properties: {
+              email: { format: "email", maxLength: 254, type: "string" },
+              file: {
+                description: "Optional PDF, maximum 5 MB",
+                format: "binary",
+                type: "string",
+              },
+              fullName: { maxLength: 200, minLength: 1, type: "string" },
+              interestArea: { maxLength: 200, type: "string" },
+              phone: { maxLength: 32, type: "string" },
+              professionalSummary: { maxLength: 2000, type: "string" },
+            },
+            required: ["email", "fullName"],
+            type: "object",
+          },
+        },
+        "application/json": {
+          schema: {
+            properties: {
+              email: { format: "email", maxLength: 254, type: "string" },
+              fullName: { maxLength: 200, minLength: 1, type: "string" },
+              interestArea: { maxLength: 200, nullable: true, type: "string" },
+              phone: { maxLength: 32, nullable: true, type: "string" },
+              professionalSummary: {
+                maxLength: 2000,
+                nullable: true,
+                type: "string",
+              },
+            },
+            required: ["email", "fullName"],
+            type: "object",
+          },
+        },
+      },
+      required: true,
+    },
+    summary: "/api/candidates",
+  })
   @ApiCreatedResponse({ description: "Candidate created successfully" })
+  @ApiConflictResponse({
+    description: "Email already registered (EMAIL_ALREADY_IN_USE)",
+  })
   @ApiBadRequestResponse({ description: "Candidate fields are invalid" })
+  @ApiPayloadTooLargeResponse({ description: "PDF exceeds the 5 MB limit" })
+  @ApiUnsupportedMediaTypeResponse({
+    description: "Uploaded content is not a PDF",
+  })
+  @ApiServiceUnavailableResponse({
+    description: "Storage unavailable (STORAGE_UNAVAILABLE)",
+  })
   @ApiInternalServerErrorResponse({
     description: "Candidate could not be saved",
   })
   create(
-    @Body({ schema: CreateCandidateDto.schema }) input: CreateCandidateInput
+    @Request() request: ExpressRequest,
+    @Body() body: CreateCandidateInput,
+    @UploadedFile() file: UploadedPdf | undefined
   ) {
-    return this.candidatesService.create(input);
+    if (file && !file.buffer.subarray(0, 5).equals(Buffer.from("%PDF-"))) {
+      throw new UnsupportedMediaTypeException({
+        code: "INVALID_FILE_TYPE",
+        message: "O conteúdo enviado não é um PDF válido.",
+      });
+    }
+    const validationInput = request.is("multipart/form-data")
+      ? request.body
+      : body;
+    const validation = CreateCandidateDto.schema.safeParse(validationInput);
+    if (!validation.success) {
+      throw new BadRequestException(validation.error.issues);
+    }
+    const parsedInput = validation.data;
+
+    return this.candidatesService
+      .create(
+        parsedInput,
+        file
+          ? ({
+              buffer: file.buffer,
+              originalName: file.originalname,
+              size: file.size,
+            } satisfies CandidatePdf)
+          : undefined
+      )
+      .then((candidate) => this.candidatesService.toResponse(candidate));
   }
 
   @Get()
   @ApiOperation({ summary: "/api/candidates" })
+  @ApiQuery({
+    description: "Busca ocorrências em nome ou e-mail (união dos resultados)",
+    name: "q",
+    required: false,
+  })
+  @ApiQuery({
+    enum: ["id", "fullName", "email", "phone", "interestArea"],
+    name: "sortBy",
+    required: false,
+  })
+  @ApiQuery({ enum: ["asc", "desc"], name: "sortOrder", required: false })
   @ApiOkResponse({ description: "Candidates retrieved successfully" })
   @ApiInternalServerErrorResponse({
     description: "Candidates could not be retrieved",
   })
-  findAll() {
-    return this.candidatesService.findAll();
+  findAll(@Query() query: Record<string, unknown>) {
+    const validation = ListCandidatesQueryDto.schema.safeParse(query);
+    if (!validation.success) {
+      throw new BadRequestException(validation.error.issues);
+    }
+    return this.candidatesService
+      .findAll(validation.data)
+      .then((candidates) =>
+        candidates.map((candidate) =>
+          this.candidatesService.toListResponse(candidate)
+        )
+      );
   }
 
   @Delete()
@@ -94,6 +215,20 @@ export class CandidatesController {
   }
 
   @Post("import-pdf")
+  @ApiConsumes("multipart/form-data")
+  @ApiBody({
+    schema: {
+      properties: {
+        file: {
+          description: "PDF to extract suggestions from, maximum 5 MB",
+          format: "binary",
+          type: "string",
+        },
+      },
+      required: ["file"],
+      type: "object",
+    },
+  })
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(
     FileInterceptor("file", {
@@ -134,6 +269,31 @@ export class CandidatesController {
     return this.pdfImportService.import(file.buffer);
   }
 
+  @Get(":id/curriculum/download")
+  @ApiOperation({ summary: "/api/candidates/{id}/curriculum/download" })
+  @ApiOkResponse({
+    description: "Curriculum download URL requested successfully",
+    schema: {
+      properties: { url: { format: "uri", type: "string" } },
+      required: ["url"],
+      type: "object",
+    },
+  })
+  @ApiBadRequestResponse({ description: "Candidate ID is invalid" })
+  @ApiNotFoundResponse({
+    description: "Candidate or curriculum does not exist",
+  })
+  @ApiInternalServerErrorResponse({
+    description: "Curriculum download URL could not be retrieved",
+  })
+  getCurriculumDownload(@Param("id", ParseIntPipe) id: number) {
+    if (!Number.isSafeInteger(id) || id < 1 || id > MAX_SQL_SERVER_INT) {
+      throw new BadRequestException("Candidate ID must be a positive integer.");
+    }
+
+    return this.candidatesService.getCurriculumDownload(id);
+  }
+
   @Get(":id")
   @ApiOperation({ summary: "/api/candidates/{id}" })
   @ApiOkResponse({ description: "Candidate retrieved successfully" })
@@ -152,7 +312,7 @@ export class CandidatesController {
       throw new NotFoundException(`Candidate ${id} was not found.`);
     }
 
-    return candidate;
+    return this.candidatesService.toResponse(candidate);
   }
 
   @Delete(":id")
