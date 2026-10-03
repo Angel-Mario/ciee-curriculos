@@ -14,7 +14,7 @@ describe("PDF contact extraction", () => {
     expect(result.data).toStrictEqual({
       email: "angelmarioroquesuarez@gmail.com",
       fullName: "Angel Mario Roque Suárez",
-      phone: "+5541997429889",
+      phone: "41997429889",
     });
     expect(result.missingFields).toStrictEqual([]);
     expect(result.warnings).toStrictEqual([]);
@@ -40,7 +40,7 @@ describe("PDF contact extraction", () => {
       data: {
         email: "ana@example.com",
         fullName: "Ana Souza",
-        phone: "+5541999991234",
+        phone: "41999991234",
       },
       missingFields: [],
       warnings: [],
@@ -90,4 +90,24 @@ describe("PDF contact extraction", () => {
       ],
     });
   });
+
+  it("deduplicates equivalent national and international phone numbers", () => {
+    const result = extractCandidateFields(
+      "Nome: Ana Souza\nana@example.com\nTelefone: +55 (41) 99742-9889\nCelular: (41) 99742-9889"
+    );
+    expect(result.data.phone).toBe("41997429889");
+    expect(result.warnings).toStrictEqual([]);
+  });
+
+  it.each(["+1 (212) 555-1234", "(20) 99999-1234", "(41) 89999-1234"])(
+    "does not suggest an invalid or foreign phone: %s",
+    (phone) => {
+      const result = extractCandidateFields(
+        `Nome: Ana Souza\nana@example.com\nTelefone: ${phone}`
+      );
+      expect(result.data.phone).toBeNull();
+      expect(result.missingFields).toContain("phone");
+      expect(result.warnings[0]?.code).toBe("PARTIAL_EXTRACTION");
+    }
+  );
 });

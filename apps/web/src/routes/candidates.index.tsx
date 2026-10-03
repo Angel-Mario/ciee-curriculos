@@ -1,5 +1,12 @@
-import { parseListCandidatesQuery } from "@ciee-curriculos/shared";
 import type { ListCandidatesQuery } from "@ciee-curriculos/shared";
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@ciee-curriculos/ui/components/combobox";
 import {
   Empty,
   EmptyDescription,
@@ -47,6 +54,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Pagination,
@@ -71,22 +80,31 @@ import {
 } from "@/components/ui/table";
 import { deleteCandidateMutationOptions } from "@/lib/candidate-mutations";
 import { candidateListOptions } from "@/lib/candidate-queries";
-import { candidateColumns, isCandidateSortField } from "@/lib/candidate-sort";
+import {
+  candidateColumns,
+  isCandidateSortField,
+  parseCandidateListSearch,
+} from "@/lib/candidate-sort";
 import type { CandidateSortField } from "@/lib/candidate-sort";
-import { getCurriculumDownloadUrl } from "@/lib/candidates";
+import {
+  getCurriculumDownloadUrl,
+  getInitials,
+  interestAreas,
+} from "@/lib/candidates";
 import type { Candidate } from "@/lib/candidates";
 
 export const Route = createFileRoute("/candidates/")({
-  component: CandidatesPage,
+  component: CandidateListPage,
   head: () => ({ meta: [{ title: "Candidatos | CIEE/PR" }] }),
-  validateSearch: parseListCandidatesQuery,
+  validateSearch: parseCandidateListSearch,
 });
+const SEARCH_DEBOUNCE_MS = 500;
 const EMPTY_CANDIDATES: Candidate[] = [];
-
-function CandidatesPage() {
-  const { q } = Route.useSearch();
-  return <CandidateListPage key={q ?? ""} />;
-}
+const curriculumFilterItems = [
+  { label: "Todos os currículos", value: "all" },
+  { label: "Com currículo", value: "yes" },
+  { label: "Sem currículo", value: "no" },
+];
 
 function CandidateListPage() {
   const search = Route.useSearch();
@@ -102,9 +120,25 @@ function CandidateListPage() {
   const candidates = candidateQuery.data?.items ?? EMPTY_CANDIDATES;
   const visibleCandidates = candidates;
   const loading = candidateQuery.isPending;
-  const usingMockData = candidateQuery.data?.usingMockData ?? false;
+  const updating = candidateQuery.isFetching && !loading;
   const loadError = candidateQuery.error?.message ?? null;
-  const [searchDraft, setSearchDraft] = useState(search.q ?? "");
+  const [searchInput, setSearchInput] = useState({
+    query: search.q,
+    value: search.q ?? "",
+  });
+  const searchDraft =
+    searchInput.query === search.q ? searchInput.value : (search.q ?? "");
+  if (searchInput.query !== search.q) {
+    setSearchInput({ query: search.q, value: search.q ?? "" });
+  }
+  const setSearchDraft = (value: string) =>
+    setSearchInput({ query: search.q, value });
+  const hasActiveFilters = Boolean(
+    searchDraft.trim() ||
+    search.q ||
+    search.interestArea ||
+    search.hasCurriculum !== "all"
+  );
   const [candidateToDelete, setCandidateToDelete] = useState<number | null>(
     null
   );
@@ -132,7 +166,7 @@ function CandidateListPage() {
         replace: true,
         search: (previous) => ({ ...previous, page: 1, q: nextQuery }),
       });
-    }, 250);
+    }, SEARCH_DEBOUNCE_MS);
     return () => window.clearTimeout(timeout);
   }, [navigate, search.q, searchDraft]);
 
@@ -148,13 +182,23 @@ function CandidateListPage() {
     .toSorted((first, second) => first - second);
 
   useEffect(() => {
-    if (search.page > pageCount) {
+    if (
+      !candidateQuery.isPending &&
+      !candidateQuery.isPlaceholderData &&
+      search.page > pageCount
+    ) {
       navigate({
         replace: true,
         search: (previous) => ({ ...previous, page: pageCount }),
       });
     }
-  }, [navigate, pageCount, search.page]);
+  }, [
+    candidateQuery.isPending,
+    candidateQuery.isPlaceholderData,
+    navigate,
+    pageCount,
+    search.page,
+  ]);
 
   const changeSort = async (field: CandidateSortField) => {
     await navigate({
@@ -250,21 +294,27 @@ function CandidateListPage() {
   if (loading) {
     return (
       <>
-        <PageHeading usingMockData={false} />
-        <CandidateListSkeleton />
+        <PageHeading />
+        <CandidateListSkeleton rowCount={Math.min(search.pageSize, 10)} />
       </>
     );
   }
   if (loadError) {
     return (
       <>
-        <PageHeading usingMockData={usingMockData} />
+        <PageHeading />
         <section className="content-card empty-content" role="alert">
           <Info aria-hidden="true" />
           <h2>Não foi possível carregar os candidatos</h2>
           <p>{loadError}</p>
-          <Button onClick={() => window.location.reload()} variant="outline">
-            Tentar novamente
+          <Button
+            disabled={candidateQuery.isFetching}
+            onClick={async () => await candidateQuery.refetch()}
+            variant="outline"
+          >
+            {candidateQuery.isFetching
+              ? "Tentando novamente…"
+              : "Tentar novamente"}
           </Button>
         </section>
       </>
@@ -273,13 +323,27 @@ function CandidateListPage() {
 
   return (
     <>
-      <PageHeading usingMockData={usingMockData} />
-      <section aria-label="Lista de candidatos" className="content-card">
+      <PageHeading />
+      <section
+        aria-label="Lista de candidatos"
+        className="content-card candidate-list-card"
+      >
+        <output className="sr-only" aria-live="polite">
+          {updating ? "Atualizando candidatos…" : ""}
+        </output>
         <div className="filter-bar">
-          <div className="search-control">
-            <label className="sr-only" htmlFor="candidate-search">
-              Buscar por nome ou e-mail
-            </label>
+          <div className="filter-field search-control">
+            <div className="search-field-heading">
+              <label htmlFor="candidate-search">
+                Buscar por nome ou e-mail
+              </label>
+              {hasActiveFilters && (
+                <Button onClick={clearFilters} size="xs" variant="ghost">
+                  <X aria-hidden="true" data-icon="inline-start" />
+                  Limpar filtros
+                </Button>
+              )}
+            </div>
             <InputGroup>
               <InputGroupAddon>
                 <Search aria-hidden="true" />
@@ -296,66 +360,73 @@ function CandidateListPage() {
               />
             </InputGroup>
           </div>
-          <label className="sr-only" htmlFor="candidate-curriculum-filter">
-            Filtrar por currículo anexado
-          </label>
-          <Select
-            value={search.hasCurriculum}
-            onValueChange={(value) => {
-              if (value === "all" || value === "yes" || value === "no") {
-                void navigate({
+          <div className="filter-field">
+            <label htmlFor="candidate-area-filter">Área de interesse</label>
+            <Combobox
+              items={interestAreas}
+              value={search.interestArea ?? null}
+              onValueChange={async (value) => {
+                await navigate({
                   search: (previous) => ({
                     ...previous,
-                    hasCurriculum: value,
-                    page: 1,
-                  }),
-                });
-              }
-            }}
-          >
-            <SelectTrigger id="candidate-curriculum-filter">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value="all">Todos os currículos</SelectItem>
-                <SelectItem value="yes">Com currículo</SelectItem>
-                <SelectItem value="no">Sem currículo</SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-          <label className="sr-only" htmlFor="candidate-area-filter">
-            Filtrar por área de interesse
-          </label>
-          <InputGroup className="search-control">
-            <InputGroupInput
-              id="candidate-area-filter"
-              placeholder="Área de interesse"
-              value={search.interestArea ?? ""}
-              onChange={(event) => {
-                void navigate({
-                  replace: true,
-                  search: (previous) => ({
-                    ...previous,
-                    interestArea: event.target.value.trim() || undefined,
+                    interestArea: value ?? undefined,
                     page: 1,
                   }),
                 });
               }}
-            />
-          </InputGroup>
-          <Button
-            disabled={
-              !searchDraft &&
-              !search.interestArea &&
-              search.hasCurriculum === "all"
-            }
-            onClick={clearFilters}
-            variant="outline"
-          >
-            <X aria-hidden="true" data-icon="inline-start" />
-            Limpar filtros
-          </Button>
+            >
+              <ComboboxInput
+                id="candidate-area-filter"
+                className="w-full"
+                placeholder="Todas as áreas"
+                showClear
+              />
+              <ComboboxContent>
+                <ComboboxEmpty>Nenhuma área encontrada.</ComboboxEmpty>
+                <ComboboxList>
+                  {(area: string) => (
+                    <ComboboxItem key={area} value={area}>
+                      {area}
+                    </ComboboxItem>
+                  )}
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
+          </div>
+          <div className="filter-field">
+            <label htmlFor="candidate-curriculum-filter">Currículo</label>
+            <Select
+              items={curriculumFilterItems}
+              value={search.hasCurriculum}
+              onValueChange={async (value) => {
+                if (value === "all" || value === "yes" || value === "no") {
+                  await navigate({
+                    search: (previous) => ({
+                      ...previous,
+                      hasCurriculum: value,
+                      page: 1,
+                    }),
+                  });
+                }
+              }}
+            >
+              <SelectTrigger
+                id="candidate-curriculum-filter"
+                className="w-full"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {curriculumFilterItems.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         {total === 0 ? (
           <Empty>
@@ -393,10 +464,8 @@ function CandidateListPage() {
           </Empty>
         ) : (
           <>
-            <div className="mobile-sort">
-              <label className="sr-only" htmlFor="candidate-sort">
-                Ordenar candidatos por
-              </label>
+            <div className="candidate-sort-bar">
+              <label htmlFor="candidate-sort">Ordenar candidatos por</label>
               <Select
                 value={search.sortBy}
                 onValueChange={(value) => {
@@ -452,33 +521,34 @@ function CandidateListPage() {
                 </caption>
                 <TableHeader>
                   <TableRow>
-                    {candidateColumns.map((column) => (
-                      <SortableHeader
-                        key={column.key}
-                        column={column}
-                        sortField={search.sortBy}
-                        ascending={search.sortOrder === "asc"}
-                        onSort={changeSort}
-                      />
-                    ))}
+                    {candidateColumns
+                      .filter((column) => column.key !== "email")
+                      .map((column) => (
+                        <SortableHeader
+                          key={column.key}
+                          column={column}
+                          sortField={search.sortBy}
+                          ascending={search.sortOrder === "asc"}
+                          onSort={changeSort}
+                        />
+                      ))}
                     <TableHead scope="col">Ações</TableHead>
                   </TableRow>
+                  <TableRow className="candidate-refresh-row">
+                    <TableHead colSpan={4} className="candidate-refresh-cell">
+                      <CandidateRefreshProgress updating={updating} />
+                    </TableHead>
+                  </TableRow>
                 </TableHeader>
-                <TableBody>
+                <TableBody aria-busy={updating}>
                   {visibleCandidates.map((candidate) => (
                     <TableRow key={candidate.id}>
-                      <TableCell>{candidate.id}</TableCell>
                       <TableCell>
-                        <span className="candidate-name-content">
-                          <span className="candidate-fullname">
-                            {candidate.fullName}
-                          </span>
-                        </span>
+                        <CandidateIdentity candidate={candidate} />
                       </TableCell>
-                      <TableCell className="candidate-email">
-                        {candidate.email}
+                      <TableCell className="candidate-phone">
+                        {candidate.phone || "Não informado"}
                       </TableCell>
-                      <TableCell>{candidate.phone || "—"}</TableCell>
                       <TableCell>{candidate.interestArea || "—"}</TableCell>
                       <TableCell>
                         <CandidateActions
@@ -494,15 +564,14 @@ function CandidateListPage() {
                 </TableBody>
               </Table>
             </div>
-            <div className="candidate-mobile-list">
+            <div className="candidate-mobile-progress">
+              <CandidateRefreshProgress updating={updating} />
+            </div>
+            <div className="candidate-mobile-list" aria-busy={updating}>
               {visibleCandidates.map((candidate) => (
                 <article className="candidate-mobile-card" key={candidate.id}>
-                  <h2>{candidate.fullName}</h2>
+                  <CandidateIdentity candidate={candidate} heading />
                   <dl>
-                    <div>
-                      <dt>E-mail</dt>
-                      <dd>{candidate.email}</dd>
-                    </div>
                     <div>
                       <dt>Telefone</dt>
                       <dd>{candidate.phone || "Não informado"}</dd>
@@ -510,10 +579,6 @@ function CandidateListPage() {
                     <div>
                       <dt>Área de interesse</dt>
                       <dd>{candidate.interestArea || "Não informada"}</dd>
-                    </div>
-                    <div>
-                      <dt>Código</dt>
-                      <dd>{candidate.id}</dd>
                     </div>
                   </dl>
                   <CandidateActions
@@ -642,28 +707,12 @@ function CandidateListPage() {
     </>
   );
 }
-function PageHeading({ usingMockData }: { usingMockData: boolean }) {
+function PageHeading() {
   return (
     <div className="page-heading">
       <div>
         <h1>Candidatos</h1>
-        <p>
-          Cadastre e consulte os candidatos da nossa base.
-          {usingMockData && (
-            <Tooltip>
-              <TooltipTrigger
-                className="mode-status"
-                aria-label="Modo demonstração: mais informações"
-              >
-                Modo demonstração
-              </TooltipTrigger>
-              <TooltipContent>
-                Dados de exemplo salvos neste navegador. A API está
-                indisponível.
-              </TooltipContent>
-            </Tooltip>
-          )}
-        </p>
+        <p>Cadastre e consulte os candidatos da nossa base.</p>
       </div>
       <div className="page-heading-actions">
         <Link className={buttonVariants()} to="/candidates/new">
@@ -674,6 +723,44 @@ function PageHeading({ usingMockData }: { usingMockData: boolean }) {
     </div>
   );
 }
+function CandidateRefreshProgress({ updating }: { updating: boolean }) {
+  return (
+    <div
+      className="candidate-refresh-progress"
+      role={updating ? "progressbar" : undefined}
+      aria-label={updating ? "Atualizando candidatos" : undefined}
+      aria-hidden={!updating}
+      data-active={updating}
+    />
+  );
+}
+
+function CandidateIdentity({
+  candidate,
+  heading = false,
+}: {
+  candidate: Candidate;
+  heading?: boolean;
+}) {
+  return (
+    <div className="candidate-identity">
+      <Avatar className="size-10 shrink-0">
+        <AvatarFallback>{getInitials(candidate.fullName)}</AvatarFallback>
+      </Avatar>
+      <div className="candidate-identity-text">
+        {heading ? (
+          <h2>{candidate.fullName}</h2>
+        ) : (
+          <span className="candidate-fullname">{candidate.fullName}</span>
+        )}
+        <a className="candidate-email" href={`mailto:${candidate.email}`}>
+          {candidate.email}
+        </a>
+      </div>
+    </div>
+  );
+}
+
 function CandidateActions({
   candidate,
   onDelete,
@@ -688,51 +775,60 @@ function CandidateActions({
   search: ListCandidatesQuery;
 }) {
   return (
-    <div className="table-actions">
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <Link
-              aria-label={`Ver ${candidate.fullName}`}
-              className={buttonVariants({
-                size: "icon-sm",
-                variant: "secondary",
-              })}
-              params={{ candidateId: String(candidate.id) }}
-              search={search}
-              to="/candidates/$candidateId"
-            />
-          }
-        >
-          <Eye aria-hidden="true" />
-        </TooltipTrigger>
-        <TooltipContent>Ver detalhes</TooltipContent>
-      </Tooltip>
-      {candidate.hasCurriculum && (
+    <div className="candidate-row-actions">
+      <Badge
+        variant="outline"
+        aria-label={candidate.hasCurriculum ? "Com currículo" : "Sem currículo"}
+      >
+        {candidate.hasCurriculum ? "PDF" : "Sem PDF"}
+      </Badge>
+      <div className="table-actions">
         <Tooltip>
           <TooltipTrigger
-            aria-label={`Baixar currículo de ${candidate.fullName}`}
-            disabled={downloading}
-            render={<Button size="icon-sm" variant="outline" />}
-            onClick={() => onDownload(candidate)}
+            render={
+              <Link
+                aria-label={`Ver detalhes de ${candidate.fullName}`}
+                className={buttonVariants({
+                  size: "sm",
+                  variant: "outline",
+                })}
+                params={{ candidateId: String(candidate.id) }}
+                search={search}
+                to="/candidates/$candidateId"
+              />
+            }
           >
-            <FileDown aria-hidden="true" />
+            <Eye aria-hidden="true" data-icon="inline-start" />
+            Detalhes
           </TooltipTrigger>
-          <TooltipContent>
-            {downloading ? "Preparando download…" : "Baixar currículo"}
-          </TooltipContent>
+          <TooltipContent>Ver detalhes</TooltipContent>
         </Tooltip>
-      )}
-      <Tooltip>
-        <TooltipTrigger
-          aria-label={`Excluir ${candidate.fullName}`}
-          render={<Button size="icon-sm" variant="destructive" />}
-          onClick={(event) => onDelete(candidate.id, event.currentTarget)}
-        >
-          <Trash2 aria-hidden="true" />
-        </TooltipTrigger>
-        <TooltipContent>Excluir candidato</TooltipContent>
-      </Tooltip>
+        {candidate.hasCurriculum && (
+          <Tooltip>
+            <TooltipTrigger
+              aria-label={`Baixar currículo de ${candidate.fullName}`}
+              disabled={downloading}
+              render={<Button size="icon-sm" variant="outline" />}
+              onClick={() => onDownload(candidate)}
+            >
+              <FileDown aria-hidden="true" />
+            </TooltipTrigger>
+            <TooltipContent>
+              {downloading ? "Preparando download…" : "Baixar currículo"}
+            </TooltipContent>
+          </Tooltip>
+        )}
+        <Tooltip>
+          <TooltipTrigger
+            aria-label={`Excluir ${candidate.fullName}`}
+            render={<Button size="icon-sm" variant="outline" />}
+            onClick={(event) => onDelete(candidate.id, event.currentTarget)}
+          >
+            <Trash2 aria-hidden="true" />
+          </TooltipTrigger>
+          <TooltipContent>Excluir candidato</TooltipContent>
+        </Tooltip>
+      </div>
     </div>
   );
 }

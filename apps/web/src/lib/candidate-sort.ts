@@ -1,10 +1,9 @@
-import { CANDIDATE_SORT_FIELDS } from "@ciee-curriculos/shared";
+import { parseListCandidatesQuery } from "@ciee-curriculos/shared";
 import type { ListCandidatesQuery } from "@ciee-curriculos/shared";
 
 import type { Candidate } from "./candidates";
 
 export const candidateColumns = [
-  { key: "id", label: "Código" },
   { key: "fullName", label: "Nome" },
   { key: "email", label: "E-mail" },
   { key: "phone", label: "Telefone" },
@@ -22,7 +21,17 @@ const NON_DIGITS = /\D/gu;
 export function isCandidateSortField(
   value: string | null
 ): value is CandidateSortField {
-  return CANDIDATE_SORT_FIELDS.some((field) => field === value);
+  return candidateColumns.some((column) => column.key === value);
+}
+
+export function parseCandidateListSearch(
+  search: Record<string, unknown>
+): ListCandidatesQuery {
+  const query = parseListCandidatesQuery(search);
+  if (query.sortBy === "id") {
+    return { ...query, sortBy: "fullName", sortOrder: "asc" };
+  }
+  return query;
 }
 
 function getSortValue(

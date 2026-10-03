@@ -19,3 +19,4 @@ export type {
   ListCandidatesQuery,
   PdfImportResult,
 } from "./candidates.js";
+export { brazilianPhoneSchema, normalizeBrazilianPhone } from "./phone.js";

@@ -1,6 +1,5 @@
+import { brazilianPhoneSchema } from "@ciee-curriculos/shared";
 import { z } from "zod";
-
-import { normalizePhone } from "../normalize-phone.js";
 
 export const extractedFieldNames = ["fullName", "email", "phone"] as const;
 
@@ -68,11 +67,8 @@ export function extractCandidateFields(text: string): {
   );
   const phoneMatches = unique(
     [...text.matchAll(phonePattern)]
-      .map(([value]) => normalizePhone(value))
-      .filter((value) => {
-        const digits = value.replaceAll(/\D/gu, "");
-        return digits.length >= 10 && digits.length <= 15;
-      })
+      .map(([value]) => brazilianPhoneSchema.safeParse(value))
+      .flatMap((result) => (result.success && result.data ? [result.data] : []))
   );
 
   const labelledName = lines.find((line) => nameLabelPattern.test(line));

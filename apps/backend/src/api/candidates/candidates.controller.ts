@@ -48,6 +48,8 @@ import { PdfImportService } from "./pdf/pdf-import.service.js";
 
 const MAX_PDF_SIZE_BYTES = 5_000_000;
 const MAX_SQL_SERVER_INT = 2_147_483_647;
+const BRAZILIAN_PHONE_DESCRIPTION =
+  "Brazilian phone with a valid DDD: 10 digits for landlines or 11 for mobile numbers starting with 9. Formatting and the optional +55 prefix are normalized to national digits.";
 
 interface UploadedPdf {
   buffer: Buffer;
@@ -87,7 +89,12 @@ export class CandidatesController {
               },
               fullName: { maxLength: 200, minLength: 1, type: "string" },
               interestArea: { maxLength: 200, type: "string" },
-              phone: { maxLength: 32, type: "string" },
+              phone: {
+                description: BRAZILIAN_PHONE_DESCRIPTION,
+                example: "41997429889",
+                maxLength: 32,
+                type: "string",
+              },
               professionalSummary: { maxLength: 2000, type: "string" },
             },
             required: ["email", "fullName"],
@@ -100,7 +107,13 @@ export class CandidatesController {
               email: { format: "email", maxLength: 254, type: "string" },
               fullName: { maxLength: 200, minLength: 1, type: "string" },
               interestArea: { maxLength: 200, nullable: true, type: "string" },
-              phone: { maxLength: 32, nullable: true, type: "string" },
+              phone: {
+                description: BRAZILIAN_PHONE_DESCRIPTION,
+                example: "41997429889",
+                maxLength: 32,
+                nullable: true,
+                type: "string",
+              },
               professionalSummary: {
                 maxLength: 2000,
                 nullable: true,

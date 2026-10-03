@@ -14,6 +14,7 @@ import {
 import { useEffect } from "react";
 
 import { CandidateDetailSkeleton } from "@/components/candidate-loading";
+import { PdfFileIcon } from "@/components/pdf-file-icon";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -232,13 +233,12 @@ function CandidateDetailPage() {
             className="detail-section"
           >
             <h3 className="detail-section-heading" id="curriculum-heading">
-              <FileText aria-hidden="true" />
               Arquivo do currículo
             </h3>
             {curriculum ? (
               <div className="curriculum-file">
                 <span className="pdf-icon">
-                  <FileText aria-hidden="true" />
+                  <PdfFileIcon />
                 </span>
                 <div className="curriculum-meta">
                   <strong>{curriculum.originalName}</strong>

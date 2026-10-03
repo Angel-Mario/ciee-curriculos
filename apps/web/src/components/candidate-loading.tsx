@@ -1,20 +1,22 @@
 import { Skeleton } from "@ciee-curriculos/ui/components/skeleton";
 
-const LOADING_ROWS = [1, 2, 3, 4, 5];
-const LOADING_COLUMNS = [1, 2, 3, 4, 5, 6];
+const DETAIL_LOADING_ROWS = [1, 2, 3, 4];
+const LOADING_COLUMNS = [1, 2, 3, 4];
 
-export function CandidateListSkeleton() {
+export function CandidateListSkeleton({ rowCount = 5 }: { rowCount?: number }) {
+  const loadingRows = Array.from({ length: rowCount }, (_, index) => index + 1);
   return (
     <section
-      className="content-card"
+      className="content-card candidate-list-card"
       aria-busy="true"
       aria-label="Lista de candidatos"
     >
       <output className="sr-only">Carregando candidatos…</output>
       <div aria-hidden="true">
         <div className="filter-bar">
-          <Skeleton className="h-11 flex-1" />
-          <Skeleton className="h-11 w-32" />
+          <Skeleton className="search-control h-11 w-full" />
+          <Skeleton className="h-11 w-full" />
+          <Skeleton className="h-11 w-full" />
         </div>
         <div className="table-scroll">
           <div className="candidate-table-skeleton">
@@ -23,7 +25,7 @@ export function CandidateListSkeleton() {
                 <Skeleton key={column} className="h-4 w-3/4" />
               ))}
             </div>
-            {LOADING_ROWS.map((row) => (
+            {loadingRows.map((row) => (
               <div className="skeleton-table-row" key={row}>
                 {LOADING_COLUMNS.map((column) => (
                   <Skeleton key={column} className="h-5 w-full" />
@@ -33,7 +35,7 @@ export function CandidateListSkeleton() {
           </div>
         </div>
         <div className="candidate-mobile-list">
-          {LOADING_ROWS.map((row) => (
+          {loadingRows.map((row) => (
             <div
               className="candidate-mobile-card skeleton-mobile-card"
               key={row}
@@ -72,7 +74,7 @@ export function CandidateDetailSkeleton() {
           <Skeleton className="profile-avatar rounded-full" />
           <div className="profile-main flex flex-col gap-4">
             <Skeleton className="h-7 w-2/3" />
-            {LOADING_ROWS.slice(0, 4).map((row) => (
+            {DETAIL_LOADING_ROWS.map((row) => (
               <Skeleton key={row} className="h-4 w-3/4" />
             ))}
           </div>

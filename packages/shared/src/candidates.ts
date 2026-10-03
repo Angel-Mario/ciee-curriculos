@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { brazilianPhoneSchema } from "./phone.js";
+
 export const CANDIDATE_SORT_FIELDS = [
   "id",
   "fullName",
@@ -9,31 +11,39 @@ export const CANDIDATE_SORT_FIELDS = [
 ] as const;
 
 const MAX_CANDIDATE_ID = 2_147_483_647;
-const optionalText = (maximum: number) =>
+const optionalText = (maximum: number, message: string) =>
   z
     .string()
-    .max(maximum)
+    .max(maximum, message)
     .nullable()
     .optional()
     .transform((value) => value?.trim() || null);
 
 export const createCandidateSchema = z
   .object({
-    email: z.string().trim().toLowerCase().min(1).max(254).pipe(z.email()),
-    fullName: z.string().trim().min(1).max(200),
-    interestArea: optionalText(200),
-    phone: optionalText(32)
-      .refine((value) => value === null || /^\+?[\d\s().-]+$/u.test(value), {
-        message:
-          "Phone must contain only digits and phone formatting characters.",
-      })
-      .transform((value) =>
-        value === null ? null : value.replaceAll(/[\s().-]/gu, "")
-      )
-      .refine((value) => value === null || /^\+?\d{10,15}$/u.test(value), {
-        message: "Phone must contain 10 to 15 digits.",
-      }),
-    professionalSummary: optionalText(2000),
+    email: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .min(1, "Informe o e-mail.")
+      .max(254, "O e-mail deve ter no máximo 254 caracteres.")
+      .pipe(
+        z.email({ error: "Informe um e-mail válido, como nome@exemplo.com." })
+      ),
+    fullName: z
+      .string()
+      .trim()
+      .min(1, "Informe o nome completo.")
+      .max(200, "O nome deve ter no máximo 200 caracteres."),
+    interestArea: optionalText(
+      200,
+      "A área ou cargo deve ter no máximo 200 caracteres."
+    ),
+    phone: brazilianPhoneSchema,
+    professionalSummary: optionalText(
+      2000,
+      "O resumo deve ter no máximo 2000 caracteres."
+    ),
   })
   .strict();
 

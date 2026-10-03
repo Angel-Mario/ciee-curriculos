@@ -1,5 +1,5 @@
 import type { ListCandidatesQuery } from "@ciee-curriculos/shared";
-import { queryOptions } from "@tanstack/react-query";
+import { keepPreviousData, queryOptions } from "@tanstack/react-query";
 
 import { getCandidate, listCandidates } from "@/lib/candidates";
 
@@ -14,6 +14,7 @@ export const candidateKeys = {
 
 export const candidateListOptions = (query: ListCandidatesQuery) =>
   queryOptions({
+    placeholderData: keepPreviousData,
     queryFn: ({ signal }) => listCandidates(query, signal),
     queryKey: candidateKeys.list(query),
   });

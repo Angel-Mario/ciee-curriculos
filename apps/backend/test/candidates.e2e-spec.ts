@@ -14,7 +14,7 @@ if (!testDatabaseName?.toLowerCase().endsWith("_test")) {
 
 function makeTextPdf() {
   const stream =
-    "BT /F1 12 Tf 72 720 Td (Nome completo: Ana Souza) Tj 0 -18 Td (ana@example.com) Tj 0 -18 Td (Telefone: 41999991234) Tj ET";
+    "BT /F1 12 Tf 72 720 Td (Nome completo: Ana Souza) Tj 0 -18 Td (ana@example.com) Tj 0 -18 Td (Telefone: +55 41 99999-1234) Tj ET";
   const objects = [
     "<< /Type /Catalog /Pages 2 0 R >>",
     "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
@@ -164,7 +164,7 @@ describe("Candidates API (e2e)", () => {
       .expect(201);
     const id = created.body.id as number;
     createdIds.push(id);
-    expect(created.body).toMatchObject({ email, phone: "+5541997429889" });
+    expect(created.body).toMatchObject({ email, phone: "41997429889" });
     const duplicate = await request(app.getHttpServer())
       .post("/api/candidates")
       .send({ email: ` ${email} `, fullName: "Duplicate email" })
@@ -173,7 +173,7 @@ describe("Candidates API (e2e)", () => {
     const details = await request(app.getHttpServer())
       .get(`/api/candidates/${id}`)
       .expect(200);
-    expect(details.body).toMatchObject({ email, phone: "+5541997429889" });
+    expect(details.body).toMatchObject({ email, phone: "41997429889" });
   });
 
   it("returns the curriculum URL only when a download is requested", async () => {
@@ -288,7 +288,7 @@ describe("Candidates API (e2e)", () => {
     const after = await request(app.getHttpServer())
       .get("/api/candidates")
       .expect(200);
-    expect(after.body).toHaveLength(before.body.length);
+    expect(after.body.total).toBe(before.body.total);
   });
 
   it("rejects non-PDF uploads and PDFs it cannot read", async () => {

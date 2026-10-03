@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { candidateColumns, compareCandidates } from "./candidate-sort";
+import {
+  candidateColumns,
+  compareCandidates,
+  isCandidateSortField,
+  parseCandidateListSearch,
+} from "./candidate-sort";
 import type { Candidate } from "./candidates";
 
 const first: Candidate = {
@@ -56,5 +61,30 @@ describe("candidate sorting", () => {
     const equivalent = { ...second, fullName: "Ána", phone: "41900000001" };
     expect(compareCandidates(first, equivalent, "phone", true)).toBe(-1);
     expect(compareCandidates(first, equivalent, "phone", false)).toBe(-1);
+  });
+});
+
+it("does not expose candidate codes as a list sort option", () => {
+  expect(isCandidateSortField("id")).toBe(false);
+  expect(candidateColumns.map(({ key }) => key)).not.toContain("id");
+  expect(
+    parseCandidateListSearch({ sortBy: "id", sortOrder: "desc" })
+  ).toMatchObject({ sortBy: "fullName", sortOrder: "asc" });
+  expect(parseCandidateListSearch({})).toMatchObject({
+    sortBy: "fullName",
+    sortOrder: "asc",
+  });
+  expect(
+    parseCandidateListSearch({
+      interestArea: "Design",
+      q: "Ana",
+      sortBy: "email",
+      sortOrder: "desc",
+    })
+  ).toMatchObject({
+    interestArea: "Design",
+    q: "Ana",
+    sortBy: "email",
+    sortOrder: "desc",
   });
 });
