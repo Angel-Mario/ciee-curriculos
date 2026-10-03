@@ -111,6 +111,9 @@ importers:
       pdf-parse:
         specifier: 2.4.5
         version: 2.4.5
+      prisma:
+        specifier: ^7.10.0
+        version: 7.10.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(magicast@0.5.5)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -157,9 +160,6 @@ importers:
       oxlint:
         specifier: latest
         version: 1.86.0
-      prisma:
-        specifier: ^7.10.0
-        version: 7.10.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(magicast@0.5.5)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
       source-map-support:
         specifier: ^0.5.21
         version: 0.5.21

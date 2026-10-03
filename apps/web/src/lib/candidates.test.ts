@@ -30,13 +30,27 @@ it("requests the backend API and returns its empty page", async () => {
   const [url, init] = fetchRequest.mock.calls[0] ?? [];
   expect(String(url)).toMatch(/^http:\/\/localhost:3000\/api\/candidates\?/u);
   expect(init?.signal).toBe(controller.signal);
+  expect(init?.headers).not.toHaveProperty("Content-Type");
 });
 it("propagates connection failures without returning demonstration data", async () => {
   const error = new TypeError("Failed to fetch");
   vi.stubGlobal("fetch", vi.fn<typeof fetch>().mockRejectedValue(error));
-  await expect(listCandidates(DEFAULT_LIST_CANDIDATES_QUERY)).rejects.toBe(
-    error
-  );
+  await expect(
+    listCandidates(DEFAULT_LIST_CANDIDATES_QUERY)
+  ).rejects.toMatchObject({
+    cause: error,
+    message:
+      "Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.",
+  });
+});
+it("preserves aborted requests so cancelled searches are not reported as connection errors", async () => {
+  const error = new DOMException("Request cancelled", "AbortError");
+  vi.stubGlobal("fetch", vi.fn<typeof fetch>().mockRejectedValue(error));
+  const controller = new AbortController();
+  controller.abort();
+  await expect(
+    listCandidates(DEFAULT_LIST_CANDIDATES_QUERY, controller.signal)
+  ).rejects.toBe(error);
 });
 it("deletes candidates through the backend API", async () => {
   const fetchRequest = vi

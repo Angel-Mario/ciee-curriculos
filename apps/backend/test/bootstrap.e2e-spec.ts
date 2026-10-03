@@ -71,7 +71,7 @@ it("boots the compiled application through main.ts", async () => {
   const application = spawn(process.execPath, ["dist/main.js"], {
     env: {
       ...process.env,
-      CORS_ORIGIN: origin,
+      CORS_ORIGIN: ` http://localhost:3001/, ${origin}/ `,
       NODE_ENV: "test",
       PORT: String(port),
     },
@@ -104,6 +104,41 @@ it("boots the compiled application through main.ts", async () => {
     headers: { Origin: origin },
   });
   expect(corsResponse.headers.get("access-control-allow-origin")).toBe(origin);
+  const localOrigin = "http://localhost:3001";
+  const preflight = await fetch(`http://127.0.0.1:${port}/api/candidates`, {
+    headers: {
+      "Access-Control-Request-Headers": "content-type",
+      "Access-Control-Request-Method": "POST",
+      Origin: localOrigin,
+    },
+    method: "OPTIONS",
+  });
+  expect(preflight.status).toBe(204);
+  expect(preflight.headers.get("access-control-allow-origin")).toBe(
+    localOrigin
+  );
+  expect(preflight.headers.get("access-control-allow-methods")).toContain(
+    "POST"
+  );
+  expect(preflight.headers.get("access-control-allow-headers")).toBe(
+    "content-type"
+  );
+
+  const denied = await fetch(`http://127.0.0.1:${port}/api`, {
+    headers: { Origin: "https://untrusted.example" },
+  });
+  expect(denied.headers.get("access-control-allow-origin")).toBeNull();
+
+  const invalidRequest = await fetch(
+    `http://127.0.0.1:${port}/api/candidates?page=0`,
+    {
+      headers: { Origin: localOrigin },
+    }
+  );
+  expect(invalidRequest.status).toBe(400);
+  expect(invalidRequest.headers.get("access-control-allow-origin")).toBe(
+    localOrigin
+  );
   const rootResponse = await fetch(`http://127.0.0.1:${port}/`, {
     redirect: "manual",
   });

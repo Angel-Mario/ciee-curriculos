@@ -48,7 +48,7 @@ pnpm dev
 - API: <http://localhost:3000/api>
 - Documentação interativa da API: <http://localhost:3000/docs>
 
-O fluxo principal permite cadastrar candidatos manualmente ou importar sugestões de um PDF, revisar os mesmos campos e salvar. A listagem oferece busca, filtros, ordenação, paginação e acesso aos detalhes. O PDF é opcional, inclusive quando sua leitura falha. Há também rotas `Todo` preservadas da base inicial.
+O fluxo principal permite cadastrar candidatos manualmente ou importar sugestões de um PDF, revisar os mesmos campos e salvar. A listagem oferece busca, filtros, ordenação, paginação e acesso aos detalhes. O PDF é opcional, inclusive quando sua leitura falha.
 
 ## Tecnologias e versões
 
@@ -87,7 +87,19 @@ pnpm prisma:studio
 
 ## Docker Compose
 
-O Compose precisa do arquivo de ambiente do backend para interpolar `SQLSERVER_PASSWORD`; `env_file` e os secrets dos serviços não são usados nessa etapa. Os scripts da raiz já passam esse arquivo:
+O Compose precisa do arquivo de ambiente do backend para interpolar `SQLSERVER_PASSWORD`. Crie-o a partir do modelo antes de iniciar a stack:
+
+```bash
+cp apps/backend/.env.example apps/backend/.env
+```
+
+No PowerShell:
+
+```powershell
+Copy-Item apps/backend/.env.example apps/backend/.env
+```
+
+Troque a senha de exemplo por uma senha de desenvolvimento segura. Os scripts da raiz já passam esse arquivo:
 
 ```bash
 pnpm docker:build
@@ -102,11 +114,13 @@ Também é possível executar o Compose diretamente:
 docker compose --env-file apps/backend/.env up --build
 ```
 
-Durante a compilação, o backend monta `apps/backend/.env` como um segredo temporário do BuildKit para gerar o Prisma Client; o arquivo e seus valores não são copiados para a imagem. Em execução, o Compose configura as variáveis necessárias para o backend.
+O Compose compila as imagens sem copiar arquivos `.env` para elas. O Prisma Client é gerado com credenciais descartáveis exclusivas da etapa de build; em execução, a aplicação recebe a configuração definida pelo Compose.
+
+A imagem do backend usa uma etapa separada de compilação. A etapa final contém o backend compilado, o pacote compartilhado compilado e dependências de produção, sem ferramentas de teste ou caches do build. O Prisma CLI e o engine de migração permanecem na imagem para aplicar migrations antes do servidor iniciar. O processo roda com o usuário `node`.
 
 A stack publica a aplicação web na porta `3001`, a API em `127.0.0.1:3000` e o SQL Server em `127.0.0.1:1433`. `APP_PORT` altera a porta da API publicada no host e `SQLSERVER_PORT` altera a porta do SQL Server no host; dentro da rede do Compose, a API sempre se conecta a `sqlserver:1433`.
 
-O Dockerfile da aplicação web monta `apps/web/.env` como um secret do BuildKit. Portanto, esse arquivo precisa existir para compilar com o Compose e definir `VITE_SERVER_URL`. O valor de `VITE_SERVER_URL` é incorporado ao bundle durante a compilação; use uma URL acessível pelo navegador, não o nome interno `backend`.
+O valor de `VITE_SERVER_URL` é incorporado ao bundle durante a compilação; o padrão é `http://localhost:3000`. Para usar outra origem, defina `VITE_SERVER_URL` em `apps/backend/.env`; escolha uma URL acessível pelo navegador, não o nome interno `backend`. `CORS_ORIGIN` também pode ser configurada nesse arquivo e, por padrão, permite `http://localhost:3001`.
 
 ## Principais scripts
 

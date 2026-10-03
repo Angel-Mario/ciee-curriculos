@@ -4,6 +4,7 @@ import { apiReference } from "@scalar/nestjs-api-reference";
 import type { Request, Response } from "express";
 
 import { AppModule } from "./app.module.js";
+import { createCorsOptions } from "./config/cors.js";
 import { env } from "./config/env.js";
 import { createDocs } from "./docs/create-docs.js";
 
@@ -15,9 +16,7 @@ async function bootstrap() {
   if (trustedProxyIps.length > 0) {
     app.getHttpAdapter().getInstance().set("trust proxy", trustedProxyIps);
   }
-  app.enableCors({
-    origin: env.CORS_ORIGIN,
-  });
+  app.enableCors(createCorsOptions(env.CORS_ORIGIN));
   app.setGlobalPrefix("api");
   app.useGlobalPipes(new StandardSchemaValidationPipe());
   app.enableShutdownHooks();

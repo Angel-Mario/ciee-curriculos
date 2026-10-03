@@ -30,7 +30,7 @@ Variáveis disponíveis:
 | --- | --- |
 | `PORT` | Porta HTTP do backend (padrão: `3000`). |
 | `NODE_ENV` | Ambiente de execução: `development`, `production` ou `test`. |
-| `CORS_ORIGIN` | Origem permitida pelo CORS (o modelo usa `http://localhost:3001`). |
+| `CORS_ORIGIN` | Origens HTTP permitidas, separadas por vírgulas (o modelo usa `http://localhost:3001`). Espaços e barras finais são normalizados; `*` permite qualquer origem sem credenciais. |
 | `TRUSTED_PROXY_IPS` | Endereços IP/CIDRs de proxies confiáveis, separados por vírgula; vazio por padrão. |
 | `SQLSERVER_HOST` | Host do SQL Server (padrão: `localhost`). |
 | `SQLSERVER_PORT` | Porta do SQL Server (padrão: `1433`). |
@@ -109,10 +109,6 @@ Por padrão, o backend atende em `http://localhost:3000`. As rotas da API usam o
 ## API atual
 
 - `GET /api`: retorna uma mensagem de boas-vindas.
-- `GET /api/todos`: lista os itens.
-- `POST /api/todos`: cria um item com `title` obrigatório e `description` opcional; `completed` é opcional e seu valor padrão é `false`.
-- `PUT /api/todos/:id`: atualiza `title`, `description` e/ou `completed`.
-- `DELETE /api/todos/:id`: exclui um item.
 - `POST /api/candidates`: cria um candidato com `fullName` e `email` obrigatórios; aceita `phone`, `interestArea` e `professionalSummary` opcionais, em JSON ou multipart com PDF opcional no campo `file`.
 - `GET /api/candidates`: retorna `{ items, page, pageSize, pageCount, total }`; aceita `q` (nome **ou** e-mail), `sortBy` (`id`, `fullName`, `email`, `phone` ou `interestArea`), `sortOrder` (`asc` ou `desc`), `interestArea` e `hasCurriculum` (`all`, `yes`, `no`). `page` começa em 1 e `pageSize` aceita 1–100 (padrão 10). Sem parâmetros, ordena por ID decrescente.
 - `GET /api/candidates/:id`: consulta os dados do candidato ou retorna 404.

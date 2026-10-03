@@ -61,15 +61,26 @@ function readErrorMessage(body: unknown): string | undefined {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE}/${path}`, {
-    ...init,
-    headers: {
-      ...(init?.body instanceof FormData
-        ? {}
-        : { "Content-Type": "application/json" }),
-      ...init?.headers,
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}/${path}`, {
+      ...init,
+      headers: {
+        ...(init?.body && !(init.body instanceof FormData)
+          ? { "Content-Type": "application/json" }
+          : {}),
+        ...init?.headers,
+      },
+    });
+  } catch (error) {
+    if (error instanceof TypeError && !init?.signal?.aborted) {
+      throw new Error(
+        "Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.",
+        { cause: error }
+      );
+    }
+    throw error;
+  }
 
   if (!response.ok) {
     let message = `A solicitação falhou (${response.status}).`;

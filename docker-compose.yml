@@ -5,20 +5,14 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
-      secrets:
-        - web_env
-        - backend_env
       args:
-        VITE_SERVER_URL: http://localhost:3000
+        VITE_SERVER_URL: "${VITE_SERVER_URL:-http://localhost:3000}"
     init: true
     ports:
       - "3001:80"
-    env_file:
-      - path: apps/web/.env
-        required: false
     depends_on:
       backend:
-        condition: service_started
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:80/"]
       interval: 10s
@@ -29,20 +23,16 @@ services:
 
   backend:
     image: backend:local
-    secrets:
-      - web_env
-      - backend_env
     build:
       context: .
       dockerfile: apps/backend/Dockerfile
-      secrets:
-        - backend_env
     init: true
     restart: unless-stopped
     ports:
       - "127.0.0.1:${APP_PORT:-3000}:3000"
     environment:
       NODE_ENV: production
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3001}
       PORT: "3000"
       SQLSERVER_HOST: sqlserver
       SQLSERVER_PORT: "1433"
@@ -61,7 +51,7 @@ services:
       [
         "sh",
         "-c",
-        "(attempt=0; until pnpm run prisma:migrate:deploy; do attempt=$$((attempt + 1)); [ $$attempt -ge 120 ] && exit 1; sleep 5; done) && pnpm run start:prod",
+        "(attempt=0; until node node_modules/prisma/build/index.js migrate deploy; do attempt=$$((attempt + 1)); [ $$attempt -ge 120 ] && exit 1; sleep 5; done) && exec node dist/main.js",
       ]
     depends_on:
       sqlserver:
@@ -70,8 +60,20 @@ services:
         condition: service_healthy
       rustfs_init:
         condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/openapi.json').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
   rustfs:
-    image: rustfs/rustfs:latest
+    image: rustfs/rustfs:1.0.0
     ports:
       - "127.0.0.1:9000:9000"
       - "127.0.0.1:9001:9001"
@@ -129,10 +131,3 @@ services:
 volumes:
   ciee-curriculos_sqlserver_data:
   ciee-curriculos_rustfs_data:
-
-# BuildKit makes these available only while install/build commands run.
-secrets:
-  web_env:
-    file: apps/web/.env
-  backend_env:
-    file: apps/backend/.env

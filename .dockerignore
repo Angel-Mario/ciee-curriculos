@@ -1,5 +1,11 @@
 **/node_modules
 .git
+.turbo
+**/.turbo
+documentacao
+**/coverage
+**/coverage-e2e
+**/*.lck
 
 **/dist
 **/build
@@ -8,9 +14,6 @@
 **/.output
 **/.svelte-kit
 **/.astro
-**/.turbo
-.turbo
-
 **/.wrangler
 **/.alchemy
 **/.expo
@@ -21,8 +24,7 @@ Dockerfile
 **/Dockerfile
 docker-compose.yml
 
-# Env value files stay out of COPY layers; runtime env comes from compose env_file,
-# build-time configuration uses BuildKit secrets; public values use build args
+# Keep environment files out of image layers; runtime settings are provided by Compose.
 **/.env
 **/.env.*
 !**/.env.example

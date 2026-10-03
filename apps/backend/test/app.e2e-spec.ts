@@ -35,7 +35,10 @@ describe("AppController (e2e)", () => {
 
   it("generates OpenAPI docs and serves the Scalar reference", async () => {
     expect(generatedOpenApi.openapi).toMatch(/^3\./u);
-    expect(generatedOpenApi.paths?.["/todos"]?.post?.requestBody).toBeDefined();
+    expect(
+      generatedOpenApi.paths?.["/candidates"]?.post?.requestBody
+    ).toBeDefined();
+    expect(generatedOpenApi.paths).not.toHaveProperty("/todos");
     const reference = await request(app.getHttpServer())
       .get("/docs")
       .expect(200);
@@ -87,36 +90,12 @@ describe("AppController (e2e)", () => {
     await request(app.getHttpServer()).get("/__missing_route__").expect(404);
   });
 
-  it("persists, updates and deletes a todo through HTTP", async () => {
-    const created = await request(app.getHttpServer())
-      .post("/todos")
-      .send({ completed: false, title: "Database integration" })
-      .expect(201);
-    const { id } = created.body;
-    expect(id).toBeTruthy();
-    const listed = await request(app.getHttpServer()).get("/todos").expect(200);
-    expect(listed.body).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ id, title: "Database integration" }),
-      ])
-    );
+  it("returns 404 for the removed todo routes", async () => {
+    await request(app.getHttpServer()).get("/todos").expect(404);
     await request(app.getHttpServer())
-      .put(`/todos/${id}`)
-      .send({ completed: true })
-      .expect(200);
-    const updated = await request(app.getHttpServer())
-      .get("/todos")
-      .expect(200);
-    expect(updated.body).toEqual(
-      expect.arrayContaining([expect.objectContaining({ completed: true, id })])
-    );
-    await request(app.getHttpServer()).delete(`/todos/${id}`).expect(200);
-    const deleted = await request(app.getHttpServer())
-      .get("/todos")
-      .expect(200);
-    expect(deleted.body).not.toEqual(
-      expect.arrayContaining([expect.objectContaining({ id })])
-    );
+      .post("/todos")
+      .send({ title: "Removed" })
+      .expect(404);
   });
 
   it("rejects unsupported methods", async () => {
