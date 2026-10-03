@@ -1,3 +1,5 @@
+import { parseListCandidatesQuery } from "@ciee-curriculos/shared";
+import type { ListCandidatesQuery } from "@ciee-curriculos/shared";
 import {
   Empty,
   EmptyDescription,
@@ -16,7 +18,7 @@ import {
   TooltipTrigger,
 } from "@ciee-curriculos/ui/components/tooltip";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   ArrowDown,
   ArrowUp,
@@ -32,7 +34,7 @@ import {
   UsersRound,
   X,
 } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { CandidateListSkeleton } from "@/components/candidate-loading";
 import {
@@ -69,46 +71,36 @@ import {
 } from "@/components/ui/table";
 import { deleteCandidateMutationOptions } from "@/lib/candidate-mutations";
 import { candidateListOptions } from "@/lib/candidate-queries";
-import {
-  candidateColumns,
-  compareCandidates,
-  isCandidateSortField,
-} from "@/lib/candidate-sort";
+import { candidateColumns, isCandidateSortField } from "@/lib/candidate-sort";
 import type { CandidateSortField } from "@/lib/candidate-sort";
-import { formatDate } from "@/lib/candidates";
 import type { Candidate } from "@/lib/candidates";
 
 export const Route = createFileRoute("/candidates/")({
   component: CandidatesPage,
   head: () => ({ meta: [{ title: "Candidatos | CIEE/PR" }] }),
+  validateSearch: parseListCandidatesQuery,
 });
-const PAGE_SIZE = 5;
 const EMPTY_CANDIDATES: Candidate[] = [];
 
 function CandidatesPage() {
+  const { q } = Route.useSearch();
+  return <CandidateListPage key={q ?? ""} />;
+}
+
+function CandidateListPage() {
+  const search = Route.useSearch();
+  const navigate = useNavigate({ from: Route.fullPath });
   const queryClient = useQueryClient();
-  const candidateQuery = useQuery(
-    candidateListOptions({
-      hasCurriculum: "all",
-      interestArea: undefined,
-      page: 1,
-      pageSize: 100,
-      q: undefined,
-      sortBy: "id",
-      sortOrder: "desc",
-    })
-  );
+  const candidateQuery = useQuery(candidateListOptions(search));
   const deleteMutation = useMutation(
     deleteCandidateMutationOptions(queryClient)
   );
   const candidates = candidateQuery.data?.items ?? EMPTY_CANDIDATES;
+  const visibleCandidates = candidates;
   const loading = candidateQuery.isPending;
   const usingMockData = candidateQuery.data?.usingMockData ?? false;
   const loadError = candidateQuery.error?.message ?? null;
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const [sortAscending, setSortAscending] = useState(true);
-  const [sortField, setSortField] = useState<CandidateSortField>("fullName");
+  const [searchDraft, setSearchDraft] = useState(search.q ?? "");
   const [candidateToDelete, setCandidateToDelete] = useState<number | null>(
     null
   );
@@ -116,44 +108,64 @@ function CandidatesPage() {
   const searchRef = useRef<HTMLInputElement>(null);
   const deleteTriggerRef = useRef<HTMLButtonElement | null>(null);
 
-  const filteredCandidates = useMemo(() => {
-    const query = search.trim().toLocaleLowerCase("pt-BR");
-    return candidates
-      .filter((candidate) =>
-        [candidate.fullName, candidate.email].some((value) =>
-          value.toLocaleLowerCase("pt-BR").includes(query)
-        )
-      )
-      .toSorted((first, second) =>
-        compareCandidates(first, second, sortField, sortAscending)
-      );
-  }, [candidates, search, sortField, sortAscending]);
-  const changeSort = (field: CandidateSortField) => {
-    setSortAscending(field === sortField ? !sortAscending : true);
-    setSortField(field);
-    setPage(1);
-  };
+  useEffect(() => {
+    const nextQuery = searchDraft.trim() || undefined;
+    if (nextQuery === search.q) {
+      return;
+    }
+    const timeout = window.setTimeout(() => {
+      navigate({
+        replace: true,
+        search: (previous) => ({ ...previous, page: 1, q: nextQuery }),
+      });
+    }, 250);
+    return () => window.clearTimeout(timeout);
+  }, [navigate, search.q, searchDraft]);
 
-  const pageCount = Math.max(
-    1,
-    Math.ceil(filteredCandidates.length / PAGE_SIZE)
-  );
-  const currentPage = Math.min(page, pageCount);
-  const visibleCandidates = filteredCandidates.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE
-  );
-  const startItem =
-    filteredCandidates.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
-  const endItem = Math.min(currentPage * PAGE_SIZE, filteredCandidates.length);
+  const pageCount = Math.max(1, candidateQuery.data?.pageCount ?? 1);
+  const currentPage = Math.min(search.page, pageCount);
+  const total = candidateQuery.data?.total ?? 0;
+  const startItem = total === 0 ? 0 : (currentPage - 1) * search.pageSize + 1;
+  const endItem = Math.min(currentPage * search.pageSize, total);
   const pageNumbers = [
     ...new Set([1, currentPage - 1, currentPage, currentPage + 1, pageCount]),
   ]
     .filter((number) => number >= 1 && number <= pageCount)
     .toSorted((first, second) => first - second);
-  const clearFilters = () => {
-    setSearch("");
-    setPage(1);
+
+  useEffect(() => {
+    if (search.page > pageCount) {
+      navigate({
+        replace: true,
+        search: (previous) => ({ ...previous, page: pageCount }),
+      });
+    }
+  }, [navigate, pageCount, search.page]);
+
+  const changeSort = async (field: CandidateSortField) => {
+    await navigate({
+      search: (previous) => ({
+        ...previous,
+        page: 1,
+        sortBy: field,
+        sortOrder:
+          field === search.sortBy && search.sortOrder === "asc"
+            ? "desc"
+            : "asc",
+      }),
+    });
+  };
+  const clearFilters = async () => {
+    setSearchDraft("");
+    await navigate({
+      search: (previous) => ({
+        ...previous,
+        hasCurriculum: "all",
+        interestArea: undefined,
+        page: 1,
+        q: undefined,
+      }),
+    });
     searchRef.current?.focus();
   };
   const closeDelete = () => {
@@ -172,12 +184,17 @@ function CandidatesPage() {
     }
     try {
       await deleteMutation.mutateAsync(candidateToDelete);
-      setPage(
-        Math.min(
-          currentPage,
-          Math.max(1, Math.ceil((filteredCandidates.length - 1) / PAGE_SIZE))
-        )
+      const nextPageCount = Math.max(
+        1,
+        Math.ceil((total - 1) / search.pageSize)
       );
+      await navigate({
+        replace: true,
+        search: (previous) => ({
+          ...previous,
+          page: Math.min(previous.page, nextPageCount),
+        }),
+      });
       toast.add({ type: "success", title: "Candidato removido com sucesso." });
       closeDelete();
     } catch (error) {
@@ -239,37 +256,96 @@ function CandidatesPage() {
                 name="search"
                 autoComplete="off"
                 placeholder="Buscar por nome ou e-mail…"
-                onChange={(event) => {
-                  setSearch(event.target.value);
-                  setPage(1);
-                }}
-                value={search}
+                onChange={(event) => setSearchDraft(event.target.value)}
+                value={searchDraft}
               />
             </InputGroup>
           </div>
-          <Button disabled={!search} onClick={clearFilters} variant="outline">
+          <label className="sr-only" htmlFor="candidate-curriculum-filter">
+            Filtrar por currículo anexado
+          </label>
+          <Select
+            value={search.hasCurriculum}
+            onValueChange={(value) => {
+              if (value === "all" || value === "yes" || value === "no") {
+                void navigate({
+                  search: (previous) => ({
+                    ...previous,
+                    hasCurriculum: value,
+                    page: 1,
+                  }),
+                });
+              }
+            }}
+          >
+            <SelectTrigger id="candidate-curriculum-filter">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="all">Todos os currículos</SelectItem>
+                <SelectItem value="yes">Com currículo</SelectItem>
+                <SelectItem value="no">Sem currículo</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <label className="sr-only" htmlFor="candidate-area-filter">
+            Filtrar por área de interesse
+          </label>
+          <InputGroup className="search-control">
+            <InputGroupInput
+              id="candidate-area-filter"
+              placeholder="Área de interesse"
+              value={search.interestArea ?? ""}
+              onChange={(event) => {
+                void navigate({
+                  replace: true,
+                  search: (previous) => ({
+                    ...previous,
+                    interestArea: event.target.value.trim() || undefined,
+                    page: 1,
+                  }),
+                });
+              }}
+            />
+          </InputGroup>
+          <Button
+            disabled={
+              !searchDraft &&
+              !search.interestArea &&
+              search.hasCurriculum === "all"
+            }
+            onClick={clearFilters}
+            variant="outline"
+          >
             <X aria-hidden="true" data-icon="inline-start" />
             Limpar filtros
           </Button>
         </div>
-        {filteredCandidates.length === 0 ? (
+        {total === 0 ? (
           <Empty>
             <EmptyHeader>
               <EmptyMedia variant="icon">
                 <UsersRound aria-hidden="true" />
               </EmptyMedia>
               <h2 className="text-lg font-semibold">
-                {candidates.length === 0
+                {!search.q &&
+                !search.interestArea &&
+                search.hasCurriculum === "all"
                   ? "Sua lista ainda está vazia"
                   : "Nenhum candidato encontrado"}
               </h2>
               <EmptyDescription>
-                {candidates.length === 0
+                {!search.q &&
+                !search.interestArea &&
+                search.hasCurriculum === "all"
                   ? "Cadastre o primeiro candidato para começar."
                   : "Tente outro nome ou e-mail, ou limpe os filtros."}
               </EmptyDescription>
             </EmptyHeader>
-            {candidates.length === 0 ? (
+            {!search.q &&
+            !search.interestArea &&
+            search.hasCurriculum === "all" ? (
               <Link className={buttonVariants()} to="/candidates/new">
                 <Plus aria-hidden="true" data-icon="inline-start" />
                 Novo candidato
@@ -287,11 +363,10 @@ function CandidatesPage() {
                 Ordenar candidatos por
               </label>
               <Select
-                value={sortField}
+                value={search.sortBy}
                 onValueChange={(value) => {
                   if (isCandidateSortField(value)) {
-                    setSortField(value);
-                    setPage(1);
+                    changeSort(value);
                   }
                 }}
               >
@@ -299,7 +374,7 @@ function CandidatesPage() {
                   <SelectValue>
                     {
                       candidateColumns.find(
-                        (column) => column.key === sortField
+                        (column) => column.key === search.sortBy
                       )?.label
                     }
                   </SelectValue>
@@ -317,17 +392,22 @@ function CandidatesPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  setSortAscending((value) => !value);
-                  setPage(1);
-                }}
+                onClick={async () =>
+                  await navigate({
+                    search: (previous) => ({
+                      ...previous,
+                      page: 1,
+                      sortOrder: previous.sortOrder === "asc" ? "desc" : "asc",
+                    }),
+                  })
+                }
               >
-                {sortAscending ? (
+                {search.sortOrder === "asc" ? (
                   <ArrowUp aria-hidden="true" data-icon="inline-start" />
                 ) : (
                   <ArrowDown aria-hidden="true" data-icon="inline-start" />
                 )}
-                {sortAscending ? "Crescente" : "Decrescente"}
+                {search.sortOrder === "asc" ? "Crescente" : "Decrescente"}
               </Button>
             </div>
             <div className="table-scroll">
@@ -341,8 +421,8 @@ function CandidatesPage() {
                       <SortableHeader
                         key={column.key}
                         column={column}
-                        sortField={sortField}
-                        ascending={sortAscending}
+                        sortField={search.sortBy}
+                        ascending={search.sortOrder === "asc"}
                         onSort={changeSort}
                       />
                     ))}
@@ -352,6 +432,7 @@ function CandidatesPage() {
                 <TableBody>
                   {visibleCandidates.map((candidate) => (
                     <TableRow key={candidate.id}>
+                      <TableCell>{candidate.id}</TableCell>
                       <TableCell>
                         <span className="candidate-name-content">
                           <span className="candidate-fullname">
@@ -364,13 +445,11 @@ function CandidatesPage() {
                       </TableCell>
                       <TableCell>{candidate.phone || "—"}</TableCell>
                       <TableCell>{candidate.interestArea || "—"}</TableCell>
-                      <TableCell className="candidate-created">
-                        {formatDate(candidate.createdAt)}
-                      </TableCell>
                       <TableCell>
                         <CandidateActions
                           candidate={candidate}
                           onDelete={openDelete}
+                          search={search}
                         />
                       </TableCell>
                     </TableRow>
@@ -396,13 +475,14 @@ function CandidatesPage() {
                       <dd>{candidate.interestArea || "Não informada"}</dd>
                     </div>
                     <div>
-                      <dt>Data de cadastro</dt>
-                      <dd>{formatDate(candidate.createdAt)}</dd>
+                      <dt>Código</dt>
+                      <dd>{candidate.id}</dd>
                     </div>
                   </dl>
                   <CandidateActions
                     candidate={candidate}
                     onDelete={openDelete}
+                    search={search}
                   />
                 </article>
               ))}
@@ -411,8 +491,7 @@ function CandidatesPage() {
         )}
         <div className="candidate-table-footer">
           <output aria-live="polite" aria-atomic="true">
-            Mostrando {startItem} a {endItem} de {filteredCandidates.length}{" "}
-            candidatos
+            Mostrando {startItem} a {endItem} de {total} candidatos
           </output>
           {pageCount > 1 && (
             <Pagination aria-label="Paginação de candidatos">
@@ -421,7 +500,14 @@ function CandidatesPage() {
                   <Button
                     aria-label="Página anterior"
                     disabled={currentPage === 1}
-                    onClick={() => setPage(currentPage - 1)}
+                    onClick={async () =>
+                      await navigate({
+                        search: (previous) => ({
+                          ...previous,
+                          page: currentPage - 1,
+                        }),
+                      })
+                    }
                     size="icon-sm"
                     variant="outline"
                   >
@@ -441,7 +527,14 @@ function CandidatesPage() {
                       aria-current={
                         pageNumber === currentPage ? "page" : undefined
                       }
-                      onClick={() => setPage(pageNumber)}
+                      onClick={async () =>
+                        await navigate({
+                          search: (previous) => ({
+                            ...previous,
+                            page: pageNumber,
+                          }),
+                        })
+                      }
                       size="icon-sm"
                       variant={
                         pageNumber === currentPage ? "default" : "outline"
@@ -455,7 +548,14 @@ function CandidatesPage() {
                   <Button
                     aria-label="Próxima página"
                     disabled={currentPage === pageCount}
-                    onClick={() => setPage(currentPage + 1)}
+                    onClick={async () =>
+                      await navigate({
+                        search: (previous) => ({
+                          ...previous,
+                          page: currentPage + 1,
+                        }),
+                      })
+                    }
                     size="icon-sm"
                     variant="outline"
                   >
@@ -538,9 +638,11 @@ function PageHeading({ usingMockData }: { usingMockData: boolean }) {
 function CandidateActions({
   candidate,
   onDelete,
+  search,
 }: {
   candidate: Candidate;
   onDelete: (id: number, trigger: HTMLButtonElement) => void;
+  search: ListCandidatesQuery;
 }) {
   return (
     <div className="table-actions">
@@ -554,6 +656,7 @@ function CandidateActions({
                 variant: "secondary",
               })}
               params={{ candidateId: String(candidate.id) }}
+              search={search}
               to="/candidates/$candidateId"
             />
           }

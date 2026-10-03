@@ -49,6 +49,10 @@ export const listCandidatesQuerySchema = z
   })
   .strict();
 
+export const DEFAULT_LIST_CANDIDATES_QUERY = listCandidatesQuerySchema.parse(
+  {}
+);
+
 export const deleteCandidatesSchema = z
   .object({
     ids: z
@@ -105,3 +109,8 @@ export type Candidate = z.infer<typeof candidateSchema>;
 export type CandidatePage = z.infer<typeof candidatePageSchema>;
 export type Curriculum = z.infer<typeof curriculumSchema>;
 export type PdfImportResult = z.infer<typeof pdfImportResultSchema>;
+
+export function parseListCandidatesQuery(input: unknown): ListCandidatesQuery {
+  const parsed = listCandidatesQuerySchema.safeParse(input);
+  return parsed.success ? parsed.data : listCandidatesQuerySchema.parse({});
+}

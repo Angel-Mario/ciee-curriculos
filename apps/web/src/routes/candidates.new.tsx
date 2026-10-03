@@ -1,3 +1,4 @@
+import { DEFAULT_LIST_CANDIDATES_QUERY } from "@ciee-curriculos/shared";
 import { Checkbox } from "@ciee-curriculos/ui/components/checkbox";
 import {
   Combobox,
@@ -229,6 +230,7 @@ function NewCandidatePage() {
       savedRef.current = true;
       await navigate({
         params: { candidateId: String(candidate.id) },
+        search: DEFAULT_LIST_CANDIDATES_QUERY,
         to: "/candidates/$candidateId",
       });
     } catch (error) {
@@ -510,6 +512,7 @@ function NewCandidatePage() {
           <div className="form-footer">
             <Link
               className={buttonVariants({ variant: "outline" })}
+              search={DEFAULT_LIST_CANDIDATES_QUERY}
               to="/candidates"
             >
               Cancelar

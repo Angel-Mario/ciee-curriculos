@@ -8,6 +8,7 @@ import type {
 import { candidatePageSchema } from "@ciee-curriculos/shared";
 
 import { env } from "@/env";
+import { compareCandidates } from "@/lib/candidate-sort";
 
 export type {
   Candidate,
@@ -295,6 +296,14 @@ export async function listCandidates(
         query.hasCurriculum === "all"
           ? true
           : Boolean(candidate.hasCurriculum) === (query.hasCurriculum === "yes")
+      )
+      .toSorted((first, second) =>
+        compareCandidates(
+          first,
+          second,
+          query.sortBy,
+          query.sortOrder === "asc"
+        )
       );
     const start = (query.page - 1) * query.pageSize;
     const items = filteredCandidates.slice(start, start + query.pageSize);

@@ -30,22 +30,17 @@ describe("candidate sorting", () => {
     }
   });
 
-  it("sorts dates chronologically across years and time zones", () => {
-    const earlier = { ...first, createdAt: "2026-01-01T02:30:00Z" };
-    const later = { ...second, createdAt: "2025-12-31T23:45:00-03:00" };
-    expect(compareCandidates(earlier, later, "createdAt", true)).toBeLessThan(
-      0
-    );
+  it("sorts candidate IDs numerically", () => {
+    expect(compareCandidates(first, second, "id", true)).toBeLessThan(0);
   });
 
   it("keeps missing and invalid values last in either direction", () => {
     const missing = {
       ...second,
-      createdAt: "invalid",
       interestArea: null,
       phone: null,
     };
-    for (const key of ["phone", "interestArea", "createdAt"] as const) {
+    for (const key of ["phone", "interestArea"] as const) {
       for (const ascending of [true, false]) {
         expect(compareCandidates(first, missing, key, ascending)).toBeLessThan(
           0

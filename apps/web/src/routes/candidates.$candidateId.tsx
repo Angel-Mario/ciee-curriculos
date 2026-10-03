@@ -1,3 +1,4 @@
+import { parseListCandidatesQuery } from "@ciee-curriculos/shared";
 import { toast } from "@ciee-curriculos/ui/components/toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -26,6 +27,7 @@ import {
 export const Route = createFileRoute("/candidates/$candidateId")({
   component: CandidateDetailRoute,
   head: () => ({ meta: [{ title: "Detalhes do candidato | CIEE/PR" }] }),
+  validateSearch: parseListCandidatesQuery,
 });
 
 function CandidateDetailRoute() {
@@ -35,6 +37,7 @@ function CandidateDetailRoute() {
 
 function CandidateDetailPage() {
   const { candidateId } = Route.useParams();
+  const search = Route.useSearch();
   const parsedId = Number(candidateId);
   const invalidId = !Number.isSafeInteger(parsedId) || parsedId < 1;
   const candidateQuery = useQuery({
@@ -59,7 +62,7 @@ function CandidateDetailPage() {
   if (invalidId) {
     return (
       <>
-        <Link className="detail-back" to="/candidates">
+        <Link className="detail-back" search={search} to="/candidates">
           <ArrowLeft aria-hidden="true" />
           Voltar para a lista
         </Link>
@@ -74,7 +77,7 @@ function CandidateDetailPage() {
   if (loading) {
     return (
       <>
-        <Link className="detail-back" to="/candidates">
+        <Link className="detail-back" search={search} to="/candidates">
           <ArrowLeft aria-hidden="true" />
           Voltar para a lista
         </Link>
@@ -92,7 +95,7 @@ function CandidateDetailPage() {
   if (error || !candidate) {
     return (
       <>
-        <Link className="detail-back" to="/candidates">
+        <Link className="detail-back" search={search} to="/candidates">
           <ArrowLeft aria-hidden="true" />
           Voltar para a lista
         </Link>
@@ -133,7 +136,7 @@ function CandidateDetailPage() {
 
   return (
     <>
-      <Link className="detail-back" to="/candidates">
+      <Link className="detail-back" search={search} to="/candidates">
         <ArrowLeft aria-hidden="true" />
         Voltar para a lista
       </Link>

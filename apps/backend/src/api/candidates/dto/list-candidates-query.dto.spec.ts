@@ -1,3 +1,4 @@
+import { parseListCandidatesQuery } from "@ciee-curriculos/shared";
 import { describe, expect, it } from "vitest";
 
 import { ListCandidatesQueryDto } from "./list-candidates-query.dto.js";
@@ -33,6 +34,12 @@ describe("candidate list query", () => {
       sortBy: "id",
       sortOrder: "desc",
     });
+  });
+
+  it("falls back to safe defaults for invalid pasted URLs", () => {
+    expect(
+      parseListCandidatesQuery({ page: "invalid", q: "ana" })
+    ).toStrictEqual(ListCandidatesQueryDto.schema.parse({}));
   });
 
   it.each([

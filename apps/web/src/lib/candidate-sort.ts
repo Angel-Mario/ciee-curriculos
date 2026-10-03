@@ -1,14 +1,17 @@
+import { CANDIDATE_SORT_FIELDS } from "@ciee-curriculos/shared";
+import type { ListCandidatesQuery } from "@ciee-curriculos/shared";
+
 import type { Candidate } from "./candidates";
 
 export const candidateColumns = [
+  { key: "id", label: "Código" },
   { key: "fullName", label: "Nome" },
   { key: "email", label: "E-mail" },
   { key: "phone", label: "Telefone" },
   { key: "interestArea", label: "Área de interesse" },
-  { key: "createdAt", label: "Data de cadastro" },
 ] as const;
 
-export type CandidateSortField = (typeof candidateColumns)[number]["key"];
+export type CandidateSortField = ListCandidatesQuery["sortBy"];
 
 const collator = new Intl.Collator("pt-BR", {
   numeric: true,
@@ -19,20 +22,19 @@ const NON_DIGITS = /\D/gu;
 export function isCandidateSortField(
   value: string | null
 ): value is CandidateSortField {
-  return candidateColumns.some((column) => column.key === value);
+  return CANDIDATE_SORT_FIELDS.some((field) => field === value);
 }
 
 function getSortValue(
   candidate: Candidate,
   field: CandidateSortField
 ): string | number | null {
+  if (field === "id") {
+    return candidate.id;
+  }
   const value = candidate[field]?.trim();
   if (!value) {
     return null;
-  }
-  if (field === "createdAt") {
-    const timestamp = Date.parse(value);
-    return Number.isNaN(timestamp) ? null : timestamp;
   }
   if (field === "phone") {
     return value.replaceAll(NON_DIGITS, "");
@@ -48,7 +50,6 @@ export function compareCandidates(
 ): number {
   const firstValue = getSortValue(first, field);
   const secondValue = getSortValue(second, field);
-  // Missing values stay at the end in either direction.
   if (firstValue === null && secondValue !== null) {
     return 1;
   }

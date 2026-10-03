@@ -1,3 +1,4 @@
+import { DEFAULT_LIST_CANDIDATES_QUERY } from "@ciee-curriculos/shared";
 import { Toaster } from "@ciee-curriculos/ui/components/toast";
 import { TooltipProvider } from "@ciee-curriculos/ui/components/tooltip";
 import { cn } from "@ciee-curriculos/ui/lib/utils";
@@ -60,7 +61,11 @@ function RootComponent() {
       </a>
       <div className="app-shell">
         <header className="topbar">
-          <Link className="brand-lockup" to="/candidates">
+          <Link
+            className="brand-lockup"
+            search={DEFAULT_LIST_CANDIDATES_QUERY}
+            to="/candidates"
+          >
             <img
               className="brand-logo"
               src="/brand/ciee-pr-white.svg"
@@ -128,6 +133,7 @@ function SidebarLink({
       activeOptions={{ exact: true }}
       aria-current={currentLocation}
       className={cn("sidebar-link", isActive && "sidebar-link-active")}
+      search={DEFAULT_LIST_CANDIDATES_QUERY}
       to={to}
     >
       {children}
