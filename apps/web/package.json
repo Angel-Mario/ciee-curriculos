@@ -11,10 +11,12 @@
     "check-types": "vite build && tsc --noEmit"
   },
   "dependencies": {
+    "@base-ui/react": "^1.8.0",
     "@ciee-curriculos/ui": "workspace:*",
     "@t3-oss/env-core": "^0.13.11",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/react-router": "^1.170.32",
+    "class-variance-authority": "^0.7.1",
     "lucide-react": "catalog:",
     "next-themes": "catalog:",
     "react": "catalog:",
